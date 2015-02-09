@@ -139,6 +139,8 @@ boot(void)
 	kprintf("\nContributors:\n");
 	kprintf("kaushpal@buffalo.edu\n");
 	kprintf("sdeivasi@buffalo.edu\n\n");
+
+	DEBUG(DB_VM,"Entering Kernel");
 }
 
 /*
