@@ -100,7 +100,7 @@ boot(void)
 	kprintf("%s", harvard_copyright);
 	kprintf("\n");
 
-	kprintf("Put-your-group-name-here's system version %s (%s #%d)\n", 
+	kprintf("kaushpal@buffalo.edu's system version %s (%s #%d)\n", 
 		GROUP_VERSION, buildconfig, buildversion);
 	kprintf("\n");
 
@@ -133,6 +133,10 @@ boot(void)
 	 */
 	COMPILE_ASSERT(sizeof(userptr_t) == sizeof(char *));
 	COMPILE_ASSERT(sizeof(*(userptr_t)0) == sizeof(char));
+
+	kprintf("\nContributors:\n");
+	kprintf("kaushpal@buffalo.edu\n");
+	kprintf("sdeivasi@buffalo.edu\n\n");
 }
 
 /*
