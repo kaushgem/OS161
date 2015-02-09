@@ -31,7 +31,7 @@
  * Main.
  */
 
- // Modified on 08 Feb 2015 by kaushpal@buffalo.edu
+ // 08 Feb 2015: Modified by kaushpal@buffalo.edu
 
 #include <types.h>
 #include <kern/errno.h>
@@ -151,6 +151,7 @@ void
 shutdown(void)
 {
 
+	DEBUG(DB_VM,"Shutting down Kernel");
 	kprintf("Shutting down.\n");
 	
 	vfs_clearbootfs();
