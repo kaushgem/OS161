@@ -39,7 +39,7 @@
 #include <thread.h>
 #include <current.h>
 #include <synch.h>
-
+#include <spl.h>
 ////////////////////////////////////////////////////////////
 //
 // Semaphore.
@@ -164,6 +164,7 @@ lock_create(const char *name)
         }
         
         // add stuff here as needed
+        lock->lk_holder = NULL;
         
         return lock;
 }
@@ -182,9 +183,26 @@ lock_destroy(struct lock *lock)
 void
 lock_acquire(struct lock *lock)
 {
-        // Write this
+	if(lock->lk_holder != curthread)
+		{
+			splraise(0, 1);
+			while (1) {
 
-        (void)lock;  // suppress warning until code gets written
+				if (spinlock_data_get(&lock->lk_lock) != 0) {
+					continue;
+				}
+				if (spinlock_data_testandset(&lock->lk_lock) != 0) {
+					continue;
+				}
+				break;
+			}
+			lock->lk_holder = curthread;
+
+		}
+		else
+		{
+			panic("Deadlock. Same thread trying to acquire lock twice");
+		}
 }
 
 void
@@ -192,7 +210,10 @@ lock_release(struct lock *lock)
 {
         // Write this
 
-        (void)lock;  // suppress warning until code gets written
+		lock->lk_holder = NULL;
+		lock->lk_holder = NULL;
+		spinlock_data_set(&lock->lk_lock, 0);
+		spllower(1, 0);
 }
 
 bool
@@ -200,9 +221,11 @@ lock_do_i_hold(struct lock *lock)
 {
         // Write this
 
-        (void)lock;  // suppress warning until code gets written
-
-        return true; // dummy until code gets written
+		int interruptstate, do_i_hold;
+		interruptstate = splhigh();
+		do_i_hold = (lock->lk_holder == curthread);
+		splx(interruptstate);
+		return do_i_hold;
 }
 
 ////////////////////////////////////////////////////////////
