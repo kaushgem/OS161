@@ -288,3 +288,30 @@ cv_broadcast(struct cv *cv, struct lock *lock)
 	(void)cv;    // suppress warning until code gets written
 	(void)lock;  // suppress warning until code gets written
 }
+
+
+struct rwlock * rwlock_create(const char *)
+{
+	return NULL;
+}
+void rwlock_destroy(struct rwlock *)
+{
+	void(rwlock);
+}
+
+void rwlock_acquire_read(struct rwlock *)
+{
+	void(rwlock);
+}
+void rwlock_release_read(struct rwlock *)
+{
+	void(rwlock);
+}
+void rwlock_acquire_write(struct rwlock *)
+{
+	void(rwlock);
+}
+void rwlock_release_write(struct rwlock *)
+{
+	void(rwlock);
+}
