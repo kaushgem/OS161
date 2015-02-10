@@ -290,28 +290,29 @@ cv_broadcast(struct cv *cv, struct lock *lock)
 }
 
 
-struct rwlock * rwlock_create(const char *)
+struct rwlock * rwlock_create(const char * r)
 {
-	return NULL;
+	(void)r;
+	return	NULL;
 }
-void rwlock_destroy(struct rwlock *)
+void rwlock_destroy(struct rwlock * r)
 {
-	void(rwlock);
+	(void)r;
 }
 
-void rwlock_acquire_read(struct rwlock *)
+void rwlock_acquire_read(struct rwlock * r)
 {
-	void(rwlock);
+	(void)r;
 }
-void rwlock_release_read(struct rwlock *)
+void rwlock_release_read(struct rwlock * r)
 {
-	void(rwlock);
+	(void)r;
 }
-void rwlock_acquire_write(struct rwlock *)
+void rwlock_acquire_write(struct rwlock * r)
 {
-	void(rwlock);
+	(void)r;
 }
-void rwlock_release_write(struct rwlock *)
+void rwlock_release_write(struct rwlock * r)
 {
-	void(rwlock);
+	(void)r;
 }
