@@ -213,7 +213,7 @@ lock_acquire(struct lock *lock)
 				}
 
 			lock->lk_holder = curthread;
-
+			spllower(1, 0);
 		}
 		else
 		{
@@ -225,8 +225,8 @@ void
 lock_release(struct lock *lock)
 {
         // Write this
-
 		lock->lk_holder = NULL;
+		splraise(0, 1);
 		spinlock_data_set(&lock->lk_lock, 0);
 		spllower(1, 0);
 		wchan_wakeone(lock->lk_wchan);
@@ -237,10 +237,10 @@ lock_do_i_hold(struct lock *lock)
 {
         // Write this
 
-		int interruptstate, do_i_hold;
-		interruptstate = splhigh();
+		int do_i_hold;
+		splraise(0, 1);
 		do_i_hold = (lock->lk_holder == curthread);
-		splx(interruptstate);
+		spllower(1, 0);
 		return do_i_hold;
 }
 
@@ -294,7 +294,9 @@ cv_wait(struct cv *cv, struct lock *lock)
         // Write this
 
 		wchan_lock(cv->cv_wchan);
+		splraise(0, 1);
 		lock_release(lock);
+		spllower(1, 0);
 		wchan_sleep(cv->cv_wchan);
 		lock_acquire(lock);
 
@@ -304,16 +306,20 @@ void
 cv_signal(struct cv *cv, struct lock *lock)
 {
         // Write this
-	lock_release(lock);
+	(void)lock;
+	splraise(0, 1);
 	wchan_wakeone(cv->cv_wchan);
+	spllower(1, 0);
 }
 
 void
 cv_broadcast(struct cv *cv, struct lock *lock)
 {
 	// Write this
-	lock_release(lock);
+	(void)lock;
+	splraise(0, 1);
 	wchan_wakeall(cv->cv_wchan);
+	spllower(1, 0);
 }
 
 
