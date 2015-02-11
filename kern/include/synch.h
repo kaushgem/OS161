@@ -148,6 +148,9 @@ void cv_broadcast(struct cv *cv, struct lock *lock);
 
 struct rwlock {
 	char *rwlock_name;
+	struct lock *lock;
+	struct semaphore *sem;
+	struct wchan *wchan;
 };
 
 struct rwlock * rwlock_create(const char *);

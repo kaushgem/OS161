@@ -267,12 +267,12 @@ cv_create(const char *name)
         
         // add stuff here as needed
         
-        cv->cv_wchan = wchan_create( cv->cv_name);
-        	if (cv->cv_wchan == NULL) {
-        		kfree(cv->cv_wchan);
-        		kfree(cv);
-        		return NULL;
-        	}
+        cv->cv_wchan = wchan_create(cv->cv_name);
+        if (cv->cv_wchan == NULL) {
+        	kfree(cv->cv_name);
+        	kfree(cv);
+        	return NULL;
+        }
 
         return cv;
 }
@@ -281,7 +281,6 @@ void
 cv_destroy(struct cv *cv)
 {
         KASSERT(cv != NULL);
-
         // add stuff here as needed
         wchan_destroy(cv->cv_wchan);
         kfree(cv->cv_name);
@@ -323,29 +322,82 @@ cv_broadcast(struct cv *cv, struct lock *lock)
 }
 
 
-struct rwlock * rwlock_create(const char * r)
+struct rwlock * rwlock_create(const char * name)
 {
-	(void)r;
-	return	NULL;
-}
-void rwlock_destroy(struct rwlock * r)
-{
-	(void)r;
+	struct rwlock *rwlock;
+
+	rwlock = kmalloc(sizeof(struct rwlock));
+	if(rwlock == NULL) {
+		return NULL;
+	}
+
+	rwlock->rwlock_name = kstrdup(name);
+	if(rwlock->rwlock_name == NULL) {
+		kfree(rwlock);
+		return NULL;
+	}
+
+	// add stuff here as needed
+	rwlock->lock = lock_create(name);
+	if(rwlock->lock == NULL){
+		kfree(rwlock->rwlock_name);
+		kfree(rwlock);
+		return NULL;
+	}
+
+	rwlock->sem = sem_create(name,100);
+	if(rwlock->sem == NULL){
+		kfree(rwlock->lock);
+		kfree(rwlock->rwlock_name);
+		kfree(rwlock);
+		return NULL;
+	}
+
+	rwlock->wchan = wchan_create(name);
+	if(rwlock->wchan == NULL){
+		kfree(rwlock->sem);
+		kfree(rwlock->lock);
+		kfree(rwlock->rwlock_name);
+		kfree(rwlock);
+		return NULL;
+	}
+
+	return	rwlock;
 }
 
-void rwlock_acquire_read(struct rwlock * r)
+void rwlock_destroy(struct rwlock * rwlock)
 {
-	(void)r;
+	KASSERT(rwlock != NULL);
+
+	kfree(rwlock->wchan);
+	kfree(rwlock->sem);
+	kfree(rwlock->lock);
+	kfree(rwlock->rwlock_name);
+	kfree(rwlock);
 }
-void rwlock_release_read(struct rwlock * r)
+
+void rwlock_acquire_read(struct rwlock * rwlock)
 {
-	(void)r;
+	lock_acquire(rwlock->lock);
+	P(rwlock->sem);
+	lock_release(rwlock->lock);
 }
-void rwlock_acquire_write(struct rwlock * r)
+
+void rwlock_release_read(struct rwlock * rwlock)
 {
-	(void)r;
+	V(rwlock->sem);
 }
-void rwlock_release_write(struct rwlock * r)
+
+void rwlock_acquire_write(struct rwlock * rwlock)
 {
-	(void)r;
+	lock_acquire(rwlock->lock);
+	while(rwlock->sem->sem_count > 0)
+		P(rwlock->sem);
+	lock_release(rwlock->lock);
+}
+
+void rwlock_release_write(struct rwlock * rwlock)
+{
+	while(rwlock->sem->sem_count < 100)
+		V(rwlock->sem);
 }
