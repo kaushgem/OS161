@@ -186,16 +186,18 @@ lock_acquire(struct lock *lock)
 	if(lock->lk_holder != curthread)
 		{
 			splraise(0, 1);
-			while (1) {
 
 				if (spinlock_data_get(&lock->lk_lock) != 0) {
-					continue;
+
+					// wchan sleep
 				}
+
 				if (spinlock_data_testandset(&lock->lk_lock) != 0) {
-					continue;
+					// wchan sleep
+
 				}
-				break;
-			}
+
+
 			lock->lk_holder = curthread;
 
 		}
@@ -212,6 +214,8 @@ lock_release(struct lock *lock)
 
 		lock->lk_holder = NULL;
 		spinlock_data_set(&lock->lk_lock, 0);
+
+		//
 		spllower(1, 0);
 }
 
