@@ -37,6 +37,9 @@
 
 #include <spinlock.h>
 
+
+typedef unsigned lock_data_t;
+
 /*
  * Dijkstra-style semaphore.
  *
@@ -74,10 +77,9 @@ void V(struct semaphore *);
  */
 struct lock {
 	char *lk_name;
+	struct wchan *lk_wchan;
 	struct thread *volatile lk_holder;
 	volatile spinlock_data_t lk_lock;
-
-
 };
 
 struct lock *lock_create(const char *name);
