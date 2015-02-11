@@ -98,6 +98,7 @@ void lock_acquire(struct lock *);
  */
 void lock_release(struct lock *);
 bool lock_do_i_hold(struct lock *);
+bool lock_is_acquired(struct lock *);
 void lock_destroy(struct lock *);
 
 
@@ -150,7 +151,6 @@ struct rwlock {
 	char *rwlock_name;
 	struct lock *lock;
 	struct semaphore *sem;
-	struct wchan *wchan;
 };
 
 struct rwlock * rwlock_create(const char *);

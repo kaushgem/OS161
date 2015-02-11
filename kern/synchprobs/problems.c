@@ -36,6 +36,16 @@
 #include <test.h>
 #include <synch.h>
 
+
+struct lock *male_lock;
+struct lock *female_lock;
+struct lock *matcher_lock;
+
+struct lock *room_lock;
+
+volatile int count;
+
+
 /*
  * 08 Feb 2012 : GWA : Driver code is in kern/synchprobs/driver.c. We will
  * replace that file. This file is yours to modify as you see fit.
@@ -48,62 +58,115 @@
 // the top of the corresponding driver code.
 
 void whalemating_init() {
-  return;
+
+	male_lock = lock_create("male lock");
+	if (male_lock == NULL) {
+		panic("Can't create male_lock");
+	}
+
+	female_lock = lock_create("female lock");
+	if (female_lock == NULL) {
+		panic("Can't create female_lock");
+	}
+
+	matcher_lock = lock_create("matcher lock");
+	if (matcher_lock == NULL) {
+		panic("Can't create matcher_lock");
+	}
+
+	room_lock = lock_create("room lock");
+	if (room_lock == NULL) {
+		panic("Can't create room_lock");
+	}
+
+	count = 0;
 }
 
 // 20 Feb 2012 : GWA : Adding at the suggestion of Nikhil Londhe. We don't
 // care if your problems leak memory, but if you do, use this to clean up.
 
 void whalemating_cleanup() {
+	kfree(room_lock);
+	kfree(male_lock);
+	kfree(female_lock);
+	kfree(matcher_lock);
   return;
 }
+
 
 void
 male(void *p, unsigned long which)
 {
 	struct semaphore * whalematingMenuSemaphore = (struct semaphore *)p;
-  (void)which;
-  
-  male_start();
-	// Implement this function 
-  male_end();
+	(void)which;
 
-  // 08 Feb 2012 : GWA : Please do not change this code. This is so that your
-  // whalemating driver can return to the menu cleanly.
-  V(whalematingMenuSemaphore);
-  return;
+	male_start();
+	// Implement this function
+
+	lock_acquire(male_lock);
+	while(lock_is_acquired(room_lock)) {}
+	count++;
+	while(count < 3) {}
+	lock_acquire(room_lock);
+	lock_release(male_lock);
+	count--;
+	while(count > 0) {}
+	lock_release(room_lock);
+
+	male_end();
+
+	// 08 Feb 2012 : GWA : Please do not change this code. This is so that your
+	// whalemating driver can return to the menu cleanly.
+	V(whalematingMenuSemaphore);
+	return;
 }
 
 void
 female(void *p, unsigned long which)
 {
 	struct semaphore * whalematingMenuSemaphore = (struct semaphore *)p;
-  (void)which;
-  
-  female_start();
-	// Implement this function 
-  female_end();
-  
-  // 08 Feb 2012 : GWA : Please do not change this code. This is so that your
-  // whalemating driver can return to the menu cleanly.
-  V(whalematingMenuSemaphore);
-  return;
+	(void)which;
+
+	female_start();
+	// Implement this function
+
+	lock_acquire(female_lock);
+	while(lock_is_acquired(room_lock)) {}
+	count++;
+	while(!lock_is_acquired(room_lock)) {}
+	lock_release(female_lock);
+	count--;
+
+	female_end();
+
+	// 08 Feb 2012 : GWA : Please do not change this code. This is so that your
+	// whalemating driver can return to the menu cleanly.
+	V(whalematingMenuSemaphore);
+	return;
 }
 
 void
 matchmaker(void *p, unsigned long which)
 {
 	struct semaphore * whalematingMenuSemaphore = (struct semaphore *)p;
-  (void)which;
-  
-  matchmaker_start();
-	// Implement this function 
-  matchmaker_end();
-  
-  // 08 Feb 2012 : GWA : Please do not change this code. This is so that your
-  // whalemating driver can return to the menu cleanly.
-  V(whalematingMenuSemaphore);
-  return;
+	(void)which;
+
+	matchmaker_start();
+	// Implement this function
+
+	lock_acquire(matcher_lock);
+	while(lock_is_acquired(room_lock)) {}
+	count++;
+	while(!lock_is_acquired(room_lock)) {}
+	lock_release(matcher_lock);
+	count--;
+
+	matchmaker_end();
+
+	// 08 Feb 2012 : GWA : Please do not change this code. This is so that your
+	// whalemating driver can return to the menu cleanly.
+	V(whalematingMenuSemaphore);
+	return;
 }
 
 /*

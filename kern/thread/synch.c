@@ -232,6 +232,12 @@ lock_do_i_hold(struct lock *lock)
 		return do_i_hold;
 }
 
+bool
+lock_is_acquired(struct lock *lock)
+{
+	return(lock->lk_holder != NULL);
+}
+
 ////////////////////////////////////////////////////////////
 //
 // CV
@@ -341,15 +347,6 @@ struct rwlock * rwlock_create(const char * name)
 		return NULL;
 	}
 
-	rwlock->wchan = wchan_create(name);
-	if(rwlock->wchan == NULL){
-		kfree(rwlock->sem);
-		kfree(rwlock->lock);
-		kfree(rwlock->rwlock_name);
-		kfree(rwlock);
-		return NULL;
-	}
-
 	return	rwlock;
 }
 
@@ -357,7 +354,6 @@ void rwlock_destroy(struct rwlock * rwlock)
 {
 	KASSERT(rwlock != NULL);
 
-	kfree(rwlock->wchan);
 	kfree(rwlock->sem);
 	kfree(rwlock->lock);
 	kfree(rwlock->rwlock_name);
@@ -379,7 +375,7 @@ void rwlock_release_read(struct rwlock * rwlock)
 void rwlock_acquire_write(struct rwlock * rwlock)
 {
 	lock_acquire(rwlock->lock);
-	while(rwlock->sem->sem_count < 100){}
+	while(rwlock->sem->sem_count < 100) {}
 }
 
 void rwlock_release_write(struct rwlock * rwlock)
