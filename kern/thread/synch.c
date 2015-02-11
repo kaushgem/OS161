@@ -195,30 +195,19 @@ void
 lock_acquire(struct lock *lock)
 {
 	if(lock->lk_holder != curthread)
-		{
-			splraise(0, 1);
-
-			/*	if (spinlock_data_get(&lock->lk_lock) != 0) {
-					wchan_lock(lock->lk_wchan);
-					wchan_sleep(lock->lk_wchan);
-					// wchan sleep
-				}
-			*/
-
-				while (spinlock_data_testandset(&lock->lk_lock) != 0) {
-
-					wchan_lock(lock->lk_wchan);
-					wchan_sleep(lock->lk_wchan);
-					// wchan sleep
-				}
-
-			lock->lk_holder = curthread;
-			spllower(1, 0);
+	{
+		splraise(0, 1);
+		while (spinlock_data_testandset(&lock->lk_lock) != 0) {
+			wchan_lock(lock->lk_wchan);
+			wchan_sleep(lock->lk_wchan);
 		}
-		else
-		{
-			panic("Deadlock. Same thread trying to acquire lock twice");
-		}
+		lock->lk_holder = curthread;
+		spllower(1, 0);
+	}
+	else
+	{
+		panic("Deadlock. Same thread trying to acquire lock twice");
+	}
 }
 
 void
@@ -236,7 +225,6 @@ bool
 lock_do_i_hold(struct lock *lock)
 {
         // Write this
-
 		int do_i_hold;
 		splraise(0, 1);
 		do_i_hold = (lock->lk_holder == curthread);
@@ -391,13 +379,10 @@ void rwlock_release_read(struct rwlock * rwlock)
 void rwlock_acquire_write(struct rwlock * rwlock)
 {
 	lock_acquire(rwlock->lock);
-	while(rwlock->sem->sem_count > 0)
-		P(rwlock->sem);
-	lock_release(rwlock->lock);
+	while(rwlock->sem->sem_count < 100){}
 }
 
 void rwlock_release_write(struct rwlock * rwlock)
 {
-	while(rwlock->sem->sem_count < 100)
-		V(rwlock->sem);
+	lock_release(rwlock->lock);
 }
