@@ -259,22 +259,34 @@ gostraight(void *p, unsigned long direction)
 
   long targetQuadrant = (direction + 3) % 4;
 
+//  while(true) {
+//	  int spl = splhigh();
+//	  if(!lock_is_acquired(getQuardrantLock(direction))){
+//		  lock_acquire(getQuardrantLock(direction));
+//		  splx(spl);
+//
+//		  spl = splhigh();
+//		  if(!lock_is_acquired(getQuardrantLock(targetQuadrant))){
+//			  lock_acquire(getQuardrantLock(targetQuadrant));
+//			  splx(spl);
+//			  break;
+//		  }
+//		  else{
+//			  lock_release(getQuardrantLock(direction));
+//		  }
+//
+//	  }
+//	  splx(spl);
+//  }
+
   while(true) {
 	  int spl = splhigh();
-	  if(!lock_is_acquired(getQuardrantLock(direction))){
+	  if(!lock_is_acquired(getQuardrantLock(direction)) &&
+			  !lock_is_acquired(getQuardrantLock(targetQuadrant))  )
+	  {
 		  lock_acquire(getQuardrantLock(direction));
-		  splx(spl);
-
-		  spl = splhigh();
-		  if(!lock_is_acquired(getQuardrantLock(targetQuadrant))){
-			  lock_acquire(getQuardrantLock(targetQuadrant));
-			  splx(spl);
-			  break;
-		  }
-		  else{
-			  lock_release(getQuardrantLock(direction));
-		  }
-
+		  lock_acquire(getQuardrantLock(targetQuadrant));
+		  break;
 	  }
 	  splx(spl);
   }
@@ -300,29 +312,43 @@ turnleft(void *p, unsigned long direction)
   long middleQuadrant = (direction + 3) % 4;
   long targetQuadrant = (direction + 2) % 4;
 
+//  while(true) {
+//	  int spl = splhigh();
+//	  if(!lock_is_acquired(getQuardrantLock(direction))){
+//		  lock_acquire(getQuardrantLock(direction));
+//		  splx(spl);
+//
+//		  spl = splhigh();
+//		  if(!lock_is_acquired(getQuardrantLock(middleQuadrant))){
+//			  lock_acquire(getQuardrantLock(middleQuadrant));
+//			  splx(spl);
+//
+//			  spl = splhigh();
+//			  if(!lock_is_acquired(getQuardrantLock(targetQuadrant))){
+//				  lock_acquire(getQuardrantLock(targetQuadrant));
+//				  splx(spl);
+//				  break;
+//			  }else{
+//				  lock_release(getQuardrantLock(middleQuadrant));
+//				  lock_release(getQuardrantLock(direction));
+//			  }
+//		  }else{
+//			  lock_release(getQuardrantLock(direction));
+//		  }
+//	  }
+//	  splx(spl);
+  //  }
+
   while(true) {
 	  int spl = splhigh();
-	  if(!lock_is_acquired(getQuardrantLock(direction))){
+	  if(!lock_is_acquired(getQuardrantLock(direction)) &&
+			  !lock_is_acquired(getQuardrantLock(middleQuadrant)) &&
+			  !lock_is_acquired(getQuardrantLock(targetQuadrant))  )
+	  {
 		  lock_acquire(getQuardrantLock(direction));
-		  splx(spl);
-
-		  spl = splhigh();
-		  if(!lock_is_acquired(getQuardrantLock(middleQuadrant))){
-			  lock_acquire(getQuardrantLock(middleQuadrant));
-			  splx(spl);
-
-			  spl = splhigh();
-			  if(!lock_is_acquired(getQuardrantLock(targetQuadrant))){
-				  lock_acquire(getQuardrantLock(targetQuadrant));
-				  splx(spl);
-				  break;
-			  }else{
-				  lock_release(getQuardrantLock(middleQuadrant));
-				  lock_release(getQuardrantLock(direction));
-			  }
-		  }else{
-			  lock_release(getQuardrantLock(direction));
-		  }
+		  lock_acquire(getQuardrantLock(middleQuadrant));
+		  lock_acquire(getQuardrantLock(targetQuadrant));
+		  break;
 	  }
 	  splx(spl);
   }
