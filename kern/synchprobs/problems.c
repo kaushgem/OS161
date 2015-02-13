@@ -279,8 +279,9 @@ gostraight(void *p, unsigned long direction)
 //	  splx(spl);
 //  }
 
+  int spl = 0;
   while(true) {
-	  int spl = splhigh();
+	  spl = splhigh();
 	  if(!lock_is_acquired(getQuardrantLock(direction)) &&
 			  !lock_is_acquired(getQuardrantLock(targetQuadrant))  )
 	  {
@@ -298,6 +299,8 @@ gostraight(void *p, unsigned long direction)
 
   lock_release(getQuardrantLock(targetQuadrant));
   lock_release(getQuardrantLock(direction));
+
+  splx(spl);
 
   V(stoplightMenuSemaphore);
   return;
@@ -339,8 +342,9 @@ turnleft(void *p, unsigned long direction)
 //	  splx(spl);
   //  }
 
+  int spl = 0;
   while(true) {
-	  int spl = splhigh();
+	  spl = splhigh();
 	  if(!lock_is_acquired(getQuardrantLock(direction)) &&
 			  !lock_is_acquired(getQuardrantLock(middleQuadrant)) &&
 			  !lock_is_acquired(getQuardrantLock(targetQuadrant))  )
@@ -348,6 +352,7 @@ turnleft(void *p, unsigned long direction)
 		  lock_acquire(getQuardrantLock(direction));
 		  lock_acquire(getQuardrantLock(middleQuadrant));
 		  lock_acquire(getQuardrantLock(targetQuadrant));
+
 		  break;
 	  }
 	  splx(spl);
@@ -362,7 +367,7 @@ turnleft(void *p, unsigned long direction)
   lock_release(getQuardrantLock(targetQuadrant));
   lock_release(getQuardrantLock(middleQuadrant));
   lock_release(getQuardrantLock(direction));
-
+  splx(spl);
 
   // 08 Feb 2012 : GWA : Please do not change this code. This is so that your
   // stoplight driver can return to the menu cleanly.
