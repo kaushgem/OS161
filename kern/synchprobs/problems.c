@@ -384,12 +384,22 @@ turnright(void *p, unsigned long direction)
   // 08 Feb 2012 : GWA : Please do not change this code. This is so that your
   // stoplight driver can return to the menu cleanly.
 
-  lock_acquire(getQuardrantLock(direction));
+  int spl = 0;
+  while(true) {
+	  spl = splhigh();
+	  if(!lock_is_acquired(getQuardrantLock(direction)))
+	  {
+		  lock_acquire(getQuardrantLock(direction));
+		  break;
+	  }
+	  splx(spl);
+  }
 
   inQuadrant(direction);
   leaveIntersection();
 
   lock_release(getQuardrantLock(direction));
+  splx(spl);
 
   V(stoplightMenuSemaphore);
   return;
