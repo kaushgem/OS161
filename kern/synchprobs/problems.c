@@ -35,7 +35,10 @@
 #include <thread.h>
 #include <test.h>
 #include <synch.h>
+#include <spl.h>
 
+//Stop light
+struct lock* getQuardrantLock(unsigned long);
 
 struct lock *male_lock;
 struct lock *female_lock;
@@ -200,7 +203,35 @@ matchmaker(void *p, unsigned long which)
 // functions will allow you to do local initialization. They are called at
 // the top of the corresponding driver code.
 
+
+struct lock *lock0;
+struct lock *lock1;
+struct lock *lock2;
+struct lock *lock3;
+
+
 void stoplight_init() {
+
+	lock0 = lock_create("lock0");
+	if (lock0 == NULL) {
+		panic("Can't create lock0");
+	}
+
+	lock1 = lock_create("lock1");
+	if (lock1 == NULL) {
+		panic("Can't create lock1");
+	}
+
+	lock2 = lock_create("lock2");
+	if (lock2 == NULL) {
+		panic("Can't create lock2");
+	}
+
+	lock3 = lock_create("lock3");
+	if (lock3 == NULL) {
+		panic("Can't create lock3");
+	}
+
   return;
 }
 
@@ -208,6 +239,12 @@ void stoplight_init() {
 // care if your problems leak memory, but if you do, use this to clean up.
 
 void stoplight_cleanup() {
+
+	kfree(lock0);
+	kfree(lock1);
+	kfree(lock2);
+	kfree(lock3);
+
   return;
 }
 
@@ -219,6 +256,37 @@ gostraight(void *p, unsigned long direction)
   
   // 08 Feb 2012 : GWA : Please do not change this code. This is so that your
   // stoplight driver can return to the menu cleanly.
+
+  long targetQuadrant = (direction + 3) % 4;
+
+  while(true) {
+	  int spl = splhigh();
+	  if(!lock_is_acquired(getQuardrantLock(direction))){
+		  lock_acquire(getQuardrantLock(direction));
+		  splx(spl);
+
+		  spl = splhigh();
+		  if(!lock_is_acquired(getQuardrantLock(targetQuadrant))){
+			  lock_acquire(getQuardrantLock(targetQuadrant));
+			  splx(spl);
+			  break;
+		  }
+		  else{
+			  lock_release(getQuardrantLock(direction));
+		  }
+
+	  }
+	  splx(spl);
+  }
+
+  inQuadrant(direction);
+  inQuadrant(targetQuadrant);
+
+  leaveIntersection();
+
+  lock_release(getQuardrantLock(targetQuadrant));
+  lock_release(getQuardrantLock(direction));
+
   V(stoplightMenuSemaphore);
   return;
 }
@@ -229,6 +297,47 @@ turnleft(void *p, unsigned long direction)
 	struct semaphore * stoplightMenuSemaphore = (struct semaphore *)p;
   (void)direction;
   
+  long middleQuadrant = (direction + 3) % 4;
+  long targetQuadrant = (direction + 2) % 4;
+
+  while(true) {
+	  int spl = splhigh();
+	  if(!lock_is_acquired(getQuardrantLock(direction))){
+		  lock_acquire(getQuardrantLock(direction));
+		  splx(spl);
+
+		  spl = splhigh();
+		  if(!lock_is_acquired(getQuardrantLock(middleQuadrant))){
+			  lock_acquire(getQuardrantLock(middleQuadrant));
+			  splx(spl);
+
+			  spl = splhigh();
+			  if(!lock_is_acquired(getQuardrantLock(targetQuadrant))){
+				  lock_acquire(getQuardrantLock(targetQuadrant));
+				  splx(spl);
+				  break;
+			  }else{
+				  lock_release(getQuardrantLock(middleQuadrant));
+				  lock_release(getQuardrantLock(direction));
+			  }
+		  }else{
+			  lock_release(getQuardrantLock(direction));
+		  }
+	  }
+	  splx(spl);
+  }
+
+  inQuadrant(direction);
+  inQuadrant(middleQuadrant);
+  inQuadrant(targetQuadrant);
+
+  leaveIntersection();
+
+  lock_release(getQuardrantLock(targetQuadrant));
+  lock_release(getQuardrantLock(middleQuadrant));
+  lock_release(getQuardrantLock(direction));
+
+
   // 08 Feb 2012 : GWA : Please do not change this code. This is so that your
   // stoplight driver can return to the menu cleanly.
   V(stoplightMenuSemaphore);
@@ -243,6 +352,42 @@ turnright(void *p, unsigned long direction)
 
   // 08 Feb 2012 : GWA : Please do not change this code. This is so that your
   // stoplight driver can return to the menu cleanly.
+
+  lock_acquire(getQuardrantLock(direction));
+
+  inQuadrant(direction);
+  leaveIntersection();
+
+  lock_release(getQuardrantLock(direction));
+
   V(stoplightMenuSemaphore);
   return;
 }
+
+struct lock*
+getQuardrantLock(unsigned long direction)
+{
+	switch(direction)
+	{
+	case 0:{
+		return lock0;
+		break;
+	}
+	case 1:{
+		return lock1;
+		break;
+	}
+	case 2:{
+		return lock2;
+		break;
+	}
+	case 3:{
+		return lock3;
+		break;
+	}
+	}
+	return NULL;
+}
+
+
+
