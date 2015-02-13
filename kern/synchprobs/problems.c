@@ -106,15 +106,15 @@ male(void *p, unsigned long which)
 	male_start();
 	// Implement this function
 
-//	lock_acquire(male_lock);
-//	while(lock_is_acquired(room_lock)) {}
-//	count++;
-//	while(count < 3) {}
-//	lock_acquire(room_lock);
-//	lock_release(male_lock);
-//	count--;
-//	while(count > 0) {}
-//	lock_release(room_lock);
+	lock_acquire(male_lock);
+	while(lock_is_acquired(room_lock)) {}
+	count++;
+	while(count < 3) {}
+	lock_acquire(room_lock);
+	lock_release(male_lock);
+	count--;
+	while(count > 0) {}
+	lock_release(room_lock);
 
 	male_end();
 
@@ -133,12 +133,12 @@ female(void *p, unsigned long which)
 	female_start();
 	// Implement this function
 
-//	lock_acquire(female_lock);
-//	while(lock_is_acquired(room_lock)) {}
-//	count++;
-//	while(!lock_is_acquired(room_lock)) {}
-//	lock_release(female_lock);
-//	count--;
+	lock_acquire(female_lock);
+	while(lock_is_acquired(room_lock)) {}
+	count++;
+	while(!lock_is_acquired(room_lock)) {}
+	lock_release(female_lock);
+	count--;
 
 	female_end();
 
@@ -157,12 +157,12 @@ matchmaker(void *p, unsigned long which)
 	matchmaker_start();
 	// Implement this function
 
-//	lock_acquire(matcher_lock);
-//	while(lock_is_acquired(room_lock)) {}
-//	count++;
-//	while(!lock_is_acquired(room_lock)) {}
-//	lock_release(matcher_lock);
-//	count--;
+	lock_acquire(matcher_lock);
+	while(lock_is_acquired(room_lock)) {}
+	count++;
+	while(!lock_is_acquired(room_lock)) {}
+	lock_release(matcher_lock);
+	count--;
 
 	matchmaker_end();
 
