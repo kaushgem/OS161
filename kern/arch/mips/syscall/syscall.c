@@ -35,6 +35,8 @@
 #include <thread.h>
 #include <current.h>
 #include <syscall.h>
+//kaush
+#include <fileoperations.h>
 
 
 /*
@@ -110,6 +112,14 @@ syscall(struct trapframe *tf)
 		break;
 
 	    /* Add stuff here */
+
+		// kaush
+
+	    case SYS_open:
+	    	err = open();
+	    	break;
+
+		// kaush
  
 	    default:
 		kprintf("Unknown syscall %d\n", callno);
