@@ -153,6 +153,7 @@ thread_create(const char *name)
 	thread->t_cwd = NULL;
 
 	/* If you add to struct thread, be sure to initialize here */
+	thread->t_fdtable = NULL;
 
 	return thread;
 }
@@ -245,6 +246,7 @@ thread_destroy(struct thread *thread)
 	 * If you add things to struct thread, be sure to clean them up
 	 * either here or in thread_exit(). (And not both...)
 	 */
+	KASSERT(thread->t_fdtable == NULL);
 
 	/* VFS fields, cleaned up in thread_exit */
 	KASSERT(thread->t_cwd == NULL);
@@ -512,6 +514,12 @@ thread_fork(const char *name,
 		VOP_INCREF(curthread->t_cwd);
 		newthread->t_cwd = curthread->t_cwd;
 	}
+
+	// Copying File Descriptor table
+	if (curthread->t_fdtable != NULL) {
+		newthread->t_fdtable = curthread->t_fdtable;
+	}
+
 
 	/*
 	 * Because new threads come out holding the cpu runqueue lock
@@ -793,6 +801,10 @@ thread_exit(void)
 	struct thread *cur;
 
 	cur = curthread;
+
+	if (cur->t_fdtable){
+		cur->t_fdtable = NULL;
+	}
 
 	/* VFS fields */
 	if (cur->t_cwd) {
