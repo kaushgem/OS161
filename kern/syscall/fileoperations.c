@@ -34,7 +34,7 @@
 struct fhandle* create_fhandle(const char* name) {
 	struct fhandle *fobj;
 
-	fobj = (struct fhandle*) kmalloc(sizeof(*fobj));
+	fobj = (struct fhandle*) kmalloc(sizeof(struct fhandle));
 	if (fobj == NULL ) {
 		return NULL ;
 	}
