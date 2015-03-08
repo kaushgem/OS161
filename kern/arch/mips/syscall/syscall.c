@@ -35,8 +35,8 @@
 #include <thread.h>
 #include <current.h>
 #include <syscall.h>
-//kaush
-#include <fileoperations.h>
+
+#include <file_syscalls.h>
 
 
 /*
@@ -82,6 +82,7 @@ syscall(struct trapframe *tf)
 {
 	int callno;
 	int32_t retval;
+	off_t offset, retval_offset;
 	int err=0;
 	int *error = &err;
 
@@ -132,13 +133,22 @@ syscall(struct trapframe *tf)
 	    	//err = *error;
 	    	break;
 	    case SYS_lseek:
-	    	//retval = lseek
+	    	// 32 to 64bit
+	    	offset = (off_t) (tf->tf_a2)<<32 | tf->tf_a3;
+
+	    	// lseek
+	    	retval_offset = lseek(tf->tf_a0, offset, (tf->tf_sp + 16) , error);
+
+	    	// 64 to 32 bit
+	    	retval = (int32_t) ((retval_offset & 0xFFFFFFFF00000000) >> 32);
+	    	tf->tf_v1 = (int32_t) (retval_offset & 0xFFFFFFFF);
+
 	    	break;
 	    case SYS_dup2:
-	    	//dup2(tf->tf_a0, tf->tf_a1);
+	    	err = dup2(tf->tf_a0, tf->tf_a1);
 	    	break;
 	    case SYS_chdir:
-
+	    	err = chdir((const char*)tf->tf_a0);
 	    	break;
 	    case SYS___getcwd:
 

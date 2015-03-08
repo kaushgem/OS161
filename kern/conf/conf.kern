@@ -368,10 +368,9 @@ file      syscall/loadelf.c
 file      syscall/runprogram.c
 file      syscall/time_syscalls.c
 
-# Kaush
-#file      include/kern/fileoperations.h
-file      syscall/fileoperations.c
-# Kaush
+# syscall implementation
+file      syscall/file_syscalls.c
+file      syscall/process_syscalls.c
 
 #
 # Startup and initialization
