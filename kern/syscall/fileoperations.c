@@ -39,19 +39,20 @@ struct fhandle* create_fhandle(const char* name) {
 		return NULL ;
 	}
 
-	fobj->name = (const char*) kmalloc(sizeof(256));
-	if (fobj->name == NULL ) {
-		return NULL ;
-	} else {
-		fobj->name = name;
+	fobj->name = kstrdup(name);
+	if (fobj->name == NULL) {
+		kfree(fobj);
+		return NULL;
 	}
 
 	fobj->flags = 0;
 	fobj->offset = 0;
-	fobj->ref_count = 0;
+	fobj->ref_count = 1;
 
 	fobj->mutex = lock_create(name);
 	if (fobj->mutex == NULL ) {
+		kfree(fobj->name);
+		kfree(fobj);
 		return NULL ;
 	}
 
@@ -61,7 +62,7 @@ struct fhandle* create_fhandle(const char* name) {
 
 void delete_fhandle(int fd) {
 	struct fhandle *fh = curthread->t_fdtable[fd];
-	//kfree(fh->name);
+	kfree(fh->name);
 	lock_destroy(fh->mutex);
 	kfree(fh->vn);
 	kfree(fh);
@@ -74,12 +75,17 @@ int open(const char *filename, int flags, int mode, int *error) {
 
 	// 1
 	if (filename == NULL )
+	{
 		*error = EFAULT;
+		return -1;
+	}
 
 	// 2
 	if (flags != O_RDONLY || flags != O_WRONLY || flags != O_RDWR)
+	{
 		*error = EINVAL;
-
+		return -1;
+	}
 	// 3
 
 	int i;
@@ -93,9 +99,10 @@ int open(const char *filename, int flags, int mode, int *error) {
 	}
 	if (i == __OPEN_MAX) {
 		*error = EMFILE;
+		return -1;
 	}
 
-	char* kfilename = (char*) kmalloc(sizeof(*filename));
+	char* kfilename = kstrdup(filename);
 	size_t *actual;
 
 	*error = copyinstr((userptr_t) filename, kfilename, sizeof(*filename),
@@ -105,7 +112,7 @@ int open(const char *filename, int flags, int mode, int *error) {
 	}
 
 	lock_acquire(fh->mutex);
-	*error = vfs_open((char*) filename, flags, mode, &fh->vn);
+	*error = vfs_open((char*) kfilename, flags, mode, &fh->vn);
 	lock_release(fh->mutex);
 
 	return fd;
@@ -137,12 +144,12 @@ int read(int fd, void *buf, size_t size, int* error) {
 		return -1;
 	} else {
 		lock_acquire(fh->mutex);
-		struct iovec *iovec_obj;
-		struct uio *uio_obj;
-		uio_init(iovec_obj, uio_obj, (void *) buf, size, fh->offset, UIO_READ);
-		VOP_READ(fh->vn, uio_obj);
+		struct iovec iovec_obj;
+		struct uio uio_obj;
+		uio_init(&iovec_obj, &uio_obj, (void *) buf, size, fh->offset, UIO_READ);
+		VOP_READ(fh->vn, &uio_obj);
 
-		int bytes_processed = size - uio_obj->uio_resid;
+		int bytes_processed = size - uio_obj.uio_resid;
 		fh->offset += bytes_processed;
 		lock_release(fh->mutex);
 		return bytes_processed;
@@ -158,15 +165,28 @@ int write(int fd, const void *buf, size_t size, int* error) {
 		return -1;
 	} else {
 		lock_acquire(fh->mutex);
-		struct iovec *iovec_obj;
-		struct uio *uio_obj;
-		uio_init(iovec_obj, uio_obj, (void *) buf, size, fh->offset, UIO_WRITE);
-		VOP_WRITE(fh->vn, uio_obj);
+		struct iovec iovec_obj;
+		struct uio uio_obj;
+		uio_init(&iovec_obj, &uio_obj, (void *) buf, size, fh->offset, UIO_WRITE);
+		VOP_WRITE(fh->vn, &uio_obj);
 
-		int bytes_processed = size - uio_obj->uio_resid;
+		int bytes_processed = size - uio_obj.uio_resid;
 		fh->offset += size - bytes_processed;
 		lock_release(fh->mutex);
 		return bytes_processed;
+	}
+	return 0;
+}
+
+int dup2(int oldfd, int newfd){
+
+	if(curthread->t_fdtable[oldfd] == NULL ||
+			curthread->t_fdtable[newfd] != NULL ||
+			newfd > __OPEN_MAX ){
+		return EBADF;
+	}else{
+		curthread->t_fdtable[newfd] = curthread->t_fdtable[oldfd];
+		curthread->t_fdtable[newfd]->ref_count++;
 	}
 	return 0;
 }
