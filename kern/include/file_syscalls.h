@@ -1,12 +1,12 @@
 /*
- * fileoperations.h
+ * file_syscalls.h
  *
  *  Created on: Feb 28, 2015
  *      Author: trinity
  */
 
-#ifndef FILEOPERATIONS_H_
-#define FILEOPERATIONS_H_
+#ifndef FILE_SYSCALLS_H_
+#define FILE_SYSCALLS_H_
 
 
 
@@ -28,9 +28,9 @@ int write(int fd, const void *buf, size_t size, int *error);
 int close(int fd);
 
 int dup2(int oldfd, int newfd);
+off_t lseek(int fd, off_t pos, int whence, int *error);
+
+int chdir(const char *pathname);
 
 
-
-
-
-#endif /* FILEOPERATIONS_H_ */
+#endif /* FILE_SYSCALLS_H_ */

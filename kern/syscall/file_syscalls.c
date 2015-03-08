@@ -1,5 +1,5 @@
 /*
- * fileoperations.c
+ * file_syscalls.c
  *
  *  Created on: Feb 28, 2015
  *      Author: trinity
@@ -14,12 +14,13 @@
 #include <lib.h>
 #include <current.h>
 #include <kern/limits.h>
+#include <kern/seek.h>
 #include <synch.h>
 #include <kern/iovec.h>
 #include <uio.h>
 #include <vnode.h>
 #include <vfs.h>
-#include <fileoperations.h>
+#include <file_syscalls.h>
 /*
  struct fhandle {
  char name[30];
@@ -178,6 +179,8 @@ int write(int fd, const void *buf, size_t size, int* error) {
 	return 0;
 }
 
+
+
 int dup2(int oldfd, int newfd){
 
 	if(curthread->t_fdtable[oldfd] == NULL ||
@@ -190,4 +193,48 @@ int dup2(int oldfd, int newfd){
 	}
 	return 0;
 }
+
+
+off_t lseek(int fd, off_t pos, int whence , int *error)
+{
+	struct fhandle *fh;
+	if (curthread->t_fdtable[fd] == NULL ) {
+		// fd is not a valid file handle.
+		*error = EBADF;
+		return -1;
+	}
+	else if(whence != SEEK_SET
+			&& whence !=SEEK_CUR
+			&& whence!=SEEK_END)
+	{
+		// whence is invalid.
+		*error = EINVAL;
+		return -1;
+	}
+	else if(pos <0)
+	{
+		// The resulting seek position would be negative.
+		*error = EINVAL;
+		return -1;
+	}else
+	{
+		// valid lseek
+		lock_acquire(fh->mutex);
+		fh->offset = VOP_TRYSEEK(fh->vn,pos+fh->offset);
+		return fh->offset;
+	}
+	return fh->offset;
+
+}
+
+int chdir(const char *pathname)
+{
+	if(pathname == NULL)
+	{
+		return EFAULT;
+	}
+	return vfs_chdir((char*)pathname);
+}
+
+
 
