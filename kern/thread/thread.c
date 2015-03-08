@@ -153,7 +153,9 @@ thread_create(const char *name)
 	thread->t_cwd = NULL;
 
 	/* If you add to struct thread, be sure to initialize here */
-	thread->t_fdtable = NULL;
+	for(int i=0; i<__OPEN_MAX; i++){
+		thread->t_fdtable[i] = NULL;
+	}
 
 	return thread;
 }
@@ -516,8 +518,10 @@ thread_fork(const char *name,
 	}
 
 	// Copying File Descriptor table
-	if (curthread->t_fdtable != NULL) {
-		newthread->t_fdtable = curthread->t_fdtable;
+	for(int i=0; i<__OPEN_MAX; i++){
+		if(curthread->t_fdtable[i] == NULL){
+			newthread->t_fdtable[i] = curthread->t_fdtable[i];
+		}
 	}
 
 
@@ -803,7 +807,11 @@ thread_exit(void)
 	cur = curthread;
 
 	if (cur->t_fdtable){
-		cur->t_fdtable = NULL;
+		for(int i=0; i<__OPEN_MAX; i++){
+			if(curthread->t_fdtable[i] == NULL){
+				curthread->t_fdtable[i] = NULL;
+			}
+		}
 	}
 
 	/* VFS fields */

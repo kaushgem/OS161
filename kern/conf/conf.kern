@@ -369,6 +369,7 @@ file      syscall/runprogram.c
 file      syscall/time_syscalls.c
 
 # Kaush
+#file      include/kern/fileoperations.h
 file      syscall/fileoperations.c
 # Kaush
 

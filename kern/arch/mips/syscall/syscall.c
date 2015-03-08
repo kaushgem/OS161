@@ -83,6 +83,7 @@ syscall(struct trapframe *tf)
 	int callno;
 	int32_t retval;
 	int err;
+	int *error;
 
 	KASSERT(curthread != NULL);
 	KASSERT(curthread->t_curspl == 0);
@@ -100,6 +101,7 @@ syscall(struct trapframe *tf)
 	 */
 
 	retval = 0;
+	*error = 0;
 
 	switch (callno) {
 	    case SYS_reboot:
@@ -113,13 +115,37 @@ syscall(struct trapframe *tf)
 
 	    /* Add stuff here */
 
-		// kaush
-
 	    case SYS_open:
-	    	err = open();
+	    	//open(const char *filename, int flags)
+	    	// a0: filename, a1: flags, a2: mode
+	    	// a3: success, v0: fd
+	    	retval = open((const char*)tf->tf_a0, tf->tf_a1, tf->tf_a2, error);
+	    	err = *error;
+	    	// memory clean in case of error
 	    	break;
+	    case SYS_close:
+	    	err = close(tf->tf_a0);
+	    	break;
+	    case SYS_read:
+	    	retval = read(tf->tf_a0, (userptr_t)tf->tf_a1, tf->tf_a2, error);
+	    	err = *error;
+	    	break;
+	    case SYS_write:
+	    	retval = write(tf->tf_a0, (userptr_t)tf->tf_a1, tf->tf_a2, error);
+	    	err = *error;
+	    	break;
+	    case SYS_lseek:
+	    	//retval = lseek
+	    	break;
+	    case SYS_dup2:
+	    	//dup2(tf->tf_a0, tf->tf_a1);
+	    	break;
+	    case SYS_chdir:
 
-		// kaush
+	    	break;
+	    case SYS___getcwd:
+
+	    	break;
  
 	    default:
 		kprintf("Unknown syscall %d\n", callno);
