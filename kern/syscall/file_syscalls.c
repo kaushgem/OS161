@@ -236,5 +236,17 @@ int chdir(const char *pathname)
 	return vfs_chdir((char*)pathname);
 }
 
-
+int __getcwd(char *buf, size_t buflen, int *error)
+{
+	if(buf==NULL){
+		*error = EFAULT ;
+		return -1;
+	}else {
+		struct iovec iovec_obj;
+		struct uio uio_obj;
+		uio_init(&iovec_obj, &uio_obj, (void *) buf, buflen, 0, UIO_READ);
+		return vfs_getcwd(&uio_obj);
+	}
+	return 0;
+}
 

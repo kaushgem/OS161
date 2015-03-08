@@ -31,6 +31,6 @@ int dup2(int oldfd, int newfd);
 off_t lseek(int fd, off_t pos, int whence, int *error);
 
 int chdir(const char *pathname);
-
+int __getcwd(char *buf, size_t buflen, int *error);
 
 #endif /* FILE_SYSCALLS_H_ */
