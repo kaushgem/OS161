@@ -13,7 +13,7 @@
 struct fhandle {
 	char *name;
 	int flags;
-	int offset;
+	off_t offset;
 	int ref_count;
 	struct lock* mutex;
 	struct vnode* vn;

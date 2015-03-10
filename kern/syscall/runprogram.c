@@ -44,6 +44,8 @@
 #include <vfs.h>
 #include <syscall.h>
 #include <test.h>
+#include <file_syscalls.h>
+#include <process_syscalls.h>
 
 /*
  * Load program "progname" and start running it in usermode.
@@ -54,9 +56,14 @@
 int
 runprogram(char *progname)
 {
+
+	// http://jhshi.me/2012/03/14/os161-file-operation-overview/
+
+
 	struct vnode *v;
 	vaddr_t entrypoint, stackptr;
 	int result;
+	pid_array_lock = lock_create("global");
 
 	/* Open the file. */
 	result = vfs_open(progname, O_RDONLY, 0, &v);
@@ -73,6 +80,7 @@ runprogram(char *progname)
 		vfs_close(v);
 		return ENOMEM;
 	}
+
 
 	/* Activate it. */
 	as_activate(curthread->t_addrspace);
@@ -95,10 +103,35 @@ runprogram(char *progname)
 		return result;
 	}
 
+
+	//stdin,out,err
+
+	char *name = NULL;
+
+	name = kstrdup("con:");
+	curthread->t_fdtable[0] = create_fhandle(name);
+	vfs_open(name, O_RDONLY, 0664, &(curthread->t_fdtable[0]->vn));
+	kfree(name);
+
+	name = kstrdup("con:");
+	curthread->t_fdtable[1] = create_fhandle(name);
+	vfs_open(name, O_WRONLY, 0664, &(curthread->t_fdtable[1]->vn));
+	kfree(name);
+
+	name = kstrdup("con:");
+	curthread->t_fdtable[2] = create_fhandle(name);
+	vfs_open(name, O_WRONLY, 0664, &(curthread->t_fdtable[2]->vn));
+	kfree(name);
+
+
+	//
+
+
+
 	/* Warp to user mode. */
 	enter_new_process(0 /*argc*/, NULL /*userspace addr of argv*/,
-			  stackptr, entrypoint);
-	
+			stackptr, entrypoint);
+
 	/* enter_new_process does not return. */
 	panic("enter_new_process returned\n");
 	return EINVAL;

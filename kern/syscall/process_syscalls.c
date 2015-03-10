@@ -51,7 +51,7 @@ struct process_block  *init_process_block(pid_t parentpid)
 	pb->process_cv=cv_create("processcv");
 	pb->process_cv_lock = lock_create("processlock");
 	pb->exited = false;
-	pb->t = NULL;
+	//pb->t = NULL;
 	pb->exitcode = 0;
 	pb->child = NULL;
 	return NULL;
@@ -162,10 +162,13 @@ pid_t waitpid(pid_t pid, int *status, int options, int *error)
 void _exit(int exitcode){
 
 	struct process_block *currentProcess = pid_array[getpid()];
-	currentProcess->exited = true;
-	currentProcess->exitcode = _MKWAIT_EXIT(exitcode);
-	cv_broadcast(currentProcess->process_cv,currentProcess->process_cv_lock);
 
+	if(currentProcess !=NULL)
+	{
+		currentProcess->exited = true;
+		currentProcess->exitcode = _MKWAIT_EXIT(exitcode);
+		cv_broadcast(currentProcess->process_cv,currentProcess->process_cv_lock);
+	}
 }
 
 pid_t getpid()
@@ -190,7 +193,6 @@ pid_t fork(struct  trapframe *ptf, int *error)
 		*error =ENPROC;
 		return -1;
 	}
-
 
 	// assign it to global static array
 	lock_acquire(pid_array_lock);
@@ -217,43 +219,43 @@ struct trapframe *copy_parent_trapframe(struct  trapframe *ptf)
 
 	struct trapframe *ctf;
 	ctf = (struct trapframe*) kmalloc(sizeof(struct trapframe));
-	ctf->tf_vaddr= (uint32_t) ptf->tf_vaddr;	/* coprocessor 0 vaddr register */
-	ctf->tf_status= (uint32_t)  ptf->tf_status;	/* coprocessor 0 status register */
-	ctf->tf_cause= (uint32_t)  ptf->tf_cause;	/* coprocessor 0 cause register */
-	ctf->tf_lo= (uint32_t) ptf->tf_lo;
-	ctf->tf_hi= (uint32_t) ptf->tf_hi;
-	ctf->tf_ra= (uint32_t) ptf->tf_ra	;	/* Saved register 31 */
-	ctf->tf_at= (uint32_t) ptf->tf_at	;	/* Saved register 1 (AT) */
-	ctf->tf_v0= (uint32_t) ptf->tf_v0	;	/* Saved register 2 (v0) */
-	ctf->tf_v1= (uint32_t) ptf->tf_v1	;	/* etc. */
-	ctf->tf_a0= (uint32_t) ptf->tf_a0;
-	ctf->tf_a1= (uint32_t) ptf->tf_a1;
-	ctf->tf_a2= (uint32_t) ptf->tf_a2;
-	ctf->tf_a3= (uint32_t) ptf->tf_a3;
-	ctf->tf_t0= (uint32_t) ptf->tf_t0;
-	ctf->tf_t1= (uint32_t) ptf->tf_t1;
-	ctf->tf_t2= (uint32_t) ptf->tf_t2;
-	ctf->tf_t3= (uint32_t) ptf->tf_t3;
-	ctf->tf_t4= (uint32_t) ptf->tf_t4;
-	ctf->tf_t5= (uint32_t) ptf->tf_t5;
-	ctf->tf_t6= (uint32_t) ptf->tf_t6;
-	ctf->tf_t7= (uint32_t) ptf->tf_t7;
-	ctf->tf_s0= (uint32_t) ptf->tf_s0;
-	ctf->tf_s1= (uint32_t) ptf->tf_s1;
-	ctf->tf_s2= (uint32_t) ptf->tf_s2;
-	ctf->tf_s3= (uint32_t) ptf->tf_s3;
-	ctf->tf_s4= (uint32_t) ptf->tf_s4;
-	ctf->tf_s5= (uint32_t) ptf->tf_s5;
-	ctf->tf_s6= (uint32_t) ptf->tf_s6;
-	ctf->tf_s7= (uint32_t) ptf->tf_s7;
-	ctf->tf_t8= (uint32_t) ptf->tf_t8;
-	ctf->tf_t9= (uint32_t) ptf->tf_t9;
-	ctf->tf_k0= (uint32_t) ptf->tf_k0;/* dummy (see exception.S comments) */
-	ctf->tf_k1= (uint32_t) ptf->tf_k1;		/* dummy */
-	ctf->tf_gp= (uint32_t) ptf->tf_gp;
-	ctf->tf_sp= (uint32_t) ptf->tf_sp;
-	ctf->tf_s8= (uint32_t) ptf->tf_s8;
-	ctf->tf_epc= (uint32_t) ptf->tf_epc;
+	ctf->tf_vaddr = (uint32_t) ptf->tf_vaddr;	/* coprocessor 0 vaddr register */
+	ctf->tf_status = (uint32_t)  ptf->tf_status;	/* coprocessor 0 status register */
+	ctf->tf_cause = (uint32_t)  ptf->tf_cause;	/* coprocessor 0 cause register */
+	ctf->tf_lo = (uint32_t) ptf->tf_lo;
+	ctf->tf_hi = (uint32_t) ptf->tf_hi;
+	ctf->tf_ra = (uint32_t) ptf->tf_ra	;	/* Saved register 31 */
+	ctf->tf_at = (uint32_t) ptf->tf_at	;	/* Saved register 1 (AT) */
+	ctf->tf_v0 = (uint32_t) ptf->tf_v0	;	/* Saved register 2 (v0) */
+	ctf->tf_v1 = (uint32_t) ptf->tf_v1	;	/* etc. */
+	ctf->tf_a0 = (uint32_t) ptf->tf_a0;
+	ctf->tf_a1 = (uint32_t) ptf->tf_a1;
+	ctf->tf_a2 = (uint32_t) ptf->tf_a2;
+	ctf->tf_a3 = (uint32_t) ptf->tf_a3;
+	ctf->tf_t0 = (uint32_t) ptf->tf_t0;
+	ctf->tf_t1 = (uint32_t) ptf->tf_t1;
+	ctf->tf_t2 = (uint32_t) ptf->tf_t2;
+	ctf->tf_t3 = (uint32_t) ptf->tf_t3;
+	ctf->tf_t4 = (uint32_t) ptf->tf_t4;
+	ctf->tf_t5 = (uint32_t) ptf->tf_t5;
+	ctf->tf_t6 = (uint32_t) ptf->tf_t6;
+	ctf->tf_t7 = (uint32_t) ptf->tf_t7;
+	ctf->tf_s0 = (uint32_t) ptf->tf_s0;
+	ctf->tf_s1 = (uint32_t) ptf->tf_s1;
+	ctf->tf_s2 = (uint32_t) ptf->tf_s2;
+	ctf->tf_s3 = (uint32_t) ptf->tf_s3;
+	ctf->tf_s4 = (uint32_t) ptf->tf_s4;
+	ctf->tf_s5 = (uint32_t) ptf->tf_s5;
+	ctf->tf_s6 = (uint32_t) ptf->tf_s6;
+	ctf->tf_s7 = (uint32_t) ptf->tf_s7;
+	ctf->tf_t8 = (uint32_t) ptf->tf_t8;
+	ctf->tf_t9 = (uint32_t) ptf->tf_t9;
+	ctf->tf_k0 = (uint32_t) ptf->tf_k0;/* dummy (see exception.S comments) */
+	ctf->tf_k1 = (uint32_t) ptf->tf_k1;		/* dummy */
+	ctf->tf_gp = (uint32_t) ptf->tf_gp;
+	ctf->tf_sp = (uint32_t) ptf->tf_sp;
+	ctf->tf_s8 = (uint32_t) ptf->tf_s8;
+	ctf->tf_epc = (uint32_t) ptf->tf_epc;
 
 	return ctf;
 }

@@ -38,6 +38,7 @@
 
 #include <file_syscalls.h>
 #include <process_syscalls.h>
+#include <copyinout.h>
 
 /*
  * System call dispatcher.
@@ -114,9 +115,9 @@ syscall(struct trapframe *tf)
 		break;
 
 	    /* Add stuff here */
+		//--------------------------------------------------
 
 		// File SYScalls
-
 	    case SYS_open:
 	    	// a0: filename, a1: flags, a2: mode
 	    	// a3: success, v0: fd
@@ -128,38 +129,36 @@ syscall(struct trapframe *tf)
 	    	break;
 	    case SYS_read:
 	    	retval = read(tf->tf_a0, (userptr_t)tf->tf_a1, tf->tf_a2, error);
-	    	//err = *error;
 	    	break;
 	    case SYS_write:
 	    	retval = write(tf->tf_a0, (userptr_t)tf->tf_a1, tf->tf_a2, error);
-	    	//err = *error;
 	    	break;
 	    case SYS_lseek:
 	    	// 32 to 64bit
 	    	offset = (off_t) (tf->tf_a2)<<32 | tf->tf_a3;
-
 	    	// lseek
-	    	retval_offset = lseek(tf->tf_a0, offset, (tf->tf_sp + 16) , error);
 
+	    	int whence;
+	    	err = copyin((const_userptr_t)(tf->tf_sp+16), &whence, sizeof(int));
+	    	if (err) {
+	    		break;
+	    	}
+	    	retval_offset = lseek(tf->tf_a0, offset, whence , error);
 	    	// 64 to 32 bit
 	    	retval = (int32_t) ((retval_offset & 0xFFFFFFFF00000000) >> 32);
 	    	tf->tf_v1 = (int32_t) (retval_offset & 0xFFFFFFFF);
-
 	    	break;
 	    case SYS_dup2:
-	    	err = dup2(tf->tf_a0, tf->tf_a1);
+	    	err = dup2(tf->tf_a0, tf->tf_a1); // error
 	    	break;
 	    case SYS_chdir:
 	    	err = chdir((const char*)tf->tf_a0);
 	    	break;
-
-
 	    case SYS___getcwd:
+	    	err = __getcwd((char*)tf->tf_a0, (size_t)tf->tf_a1, error);
 	    	break;
- 
 
 	    // Process SYScalls
-
 	    case SYS_getpid:
 	    	retval =getpid();
 	    	break;
@@ -175,8 +174,7 @@ syscall(struct trapframe *tf)
 	    	_exit(tf->tf_a0);
 	    	break;
 
-
-
+	    //--------------------------------------------------
 
 	    default:
 		kprintf("Unknown syscall %d\n", callno);

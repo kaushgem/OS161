@@ -23,7 +23,7 @@ struct process_block
 	struct lock *process_cv_lock;
 	bool exited;
 	int exitcode;
-	struct thread* t;
+	//struct thread* t;
 	struct child *child;
 };
 

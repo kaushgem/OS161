@@ -47,6 +47,7 @@
 #include <addrspace.h>
 #include <mainbus.h>
 #include <vnode.h>
+#include <file_syscalls.h>
 
 #include "opt-synchprobs.h"
 #include "opt-defaultscheduler.h"
@@ -153,7 +154,7 @@ thread_create(const char *name)
 	thread->t_cwd = NULL;
 
 	/* If you add to struct thread, be sure to initialize here */
-	for(int i=0; i<__OPEN_MAX; i++){
+	for(int i=3; i<__OPEN_MAX; i++){
 		thread->t_fdtable[i] = NULL;
 	}
 
@@ -524,8 +525,10 @@ thread_fork(const char *name,
 
 	// Copying File Descriptor table
 	for(int i=0; i<__OPEN_MAX; i++){
-		if(curthread->t_fdtable[i] == NULL){
-			newthread->t_fdtable[i] = curthread->t_fdtable[i];
+		newthread->t_fdtable[i] = curthread->t_fdtable[i];
+		if(newthread->t_fdtable[i]!=NULL){
+			newthread->t_fdtable[i]->ref_count++;
+
 		}
 	}
 
@@ -596,8 +599,9 @@ thread_fork2(const char *name,
 
 	// Copying File Descriptor table
 	for(int i=0; i<__OPEN_MAX; i++){
-		if(curthread->t_fdtable[i] == NULL){
-			newthread->t_fdtable[i] = curthread->t_fdtable[i];
+		newthread->t_fdtable[i] = curthread->t_fdtable[i];
+		if(newthread->t_fdtable[i]!=NULL){
+			newthread->t_fdtable[i]->ref_count++;
 		}
 	}
 
