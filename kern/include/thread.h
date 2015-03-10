@@ -85,7 +85,7 @@ struct thread {
 	void *t_stack;			/* Kernel-level stack */
 	struct switchframe *t_context;	/* Saved register context (on stack) */
 	struct cpu *t_cpu;		/* CPU thread runs on */
-
+	pid_t pid;
 	/*
 	 * Interrupt state fields.
 	 *
@@ -143,6 +143,17 @@ int thread_fork(const char *name,
                 void (*func)(void *, unsigned long),
                 void *data1, unsigned long data2, 
                 struct thread **ret);
+
+
+
+int thread_fork2(const char *name,
+                void (*func)(void *, unsigned long),
+                void *data1, unsigned long data2,
+                struct thread **ret);
+
+
+void
+thread_make_runnable2(struct thread *target, bool already_have_lock);
 
 /*
  * Cause the current thread to exit.

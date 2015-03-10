@@ -469,6 +469,11 @@ thread_make_runnable(struct thread *target, bool already_have_lock)
 	}
 }
 
+void
+thread_make_runnable2(struct thread *target, bool already_have_lock){
+	thread_make_runnable(target, already_have_lock);
+}
+
 /*
  * Create a new thread based on an existing one.
  *
@@ -550,6 +555,79 @@ thread_fork(const char *name,
 
 	return 0;
 }
+
+
+int
+thread_fork2(const char *name,
+	    void (*entrypoint)(void *data1, unsigned long data2),
+	    void *data1, unsigned long data2,
+	    struct thread **ret)
+{
+	struct thread *newthread;
+
+	newthread = thread_create(name);
+	if (newthread == NULL) {
+		return ENOMEM;
+	}
+
+	/* Allocate a stack */
+	newthread->t_stack = kmalloc(STACK_SIZE);
+	if (newthread->t_stack == NULL) {
+		thread_destroy(newthread);
+		return ENOMEM;
+	}
+	thread_checkstack_init(newthread);
+
+	/*
+	 * Now we clone various fields from the parent thread.
+	 */
+
+	/* Thread subsystem fields */
+	newthread->t_cpu = curthread->t_cpu;
+
+	/* VM fields */
+	/* do not clone address space -- let caller decide on that */
+
+	/* VFS fields */
+	if (curthread->t_cwd != NULL) {
+		VOP_INCREF(curthread->t_cwd);
+		newthread->t_cwd = curthread->t_cwd;
+	}
+
+	// Copying File Descriptor table
+	for(int i=0; i<__OPEN_MAX; i++){
+		if(curthread->t_fdtable[i] == NULL){
+			newthread->t_fdtable[i] = curthread->t_fdtable[i];
+		}
+	}
+
+
+	/*
+	 * Because new threads come out holding the cpu runqueue lock
+	 * (see notes at bottom of thread_switch), we need to account
+	 * for the spllower() that will be done releasing it.
+	 */
+	newthread->t_iplhigh_count++;
+
+	/* Set up the switchframe so entrypoint() gets called */
+	switchframe_init(newthread, entrypoint, data1, data2);
+
+	/* Lock the current cpu's run queue and make the new thread runnable */
+	//thread_make_runnable(newthread, false);
+
+	/*
+	 * Return new thread structure if it's wanted. Note that using
+	 * the thread structure from the parent thread should be done
+	 * only with caution, because in general the child thread
+	 * might exit at any time.
+	 */
+	if (ret != NULL) {
+		*ret = newthread;
+	}
+
+	return 0;
+}
+
 
 /*
  * High level, machine-independent context switch code.

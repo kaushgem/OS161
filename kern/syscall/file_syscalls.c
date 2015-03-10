@@ -21,16 +21,7 @@
 #include <vnode.h>
 #include <vfs.h>
 #include <file_syscalls.h>
-/*
- struct fhandle {
- char name[30];
- int flags;
- int offset;
- int ref_count;
- struct lock* mutex;
- struct vnode* vn;
- };
- */
+
 
 struct fhandle* create_fhandle(const char* name) {
 	struct fhandle *fobj;
@@ -120,11 +111,10 @@ int open(const char *filename, int flags, int mode, int *error) {
 }
 
 int close(int fd) {
-	struct fhandle *fh;
+	struct fhandle *fh = curthread->t_fdtable[fd];
 	if (curthread->t_fdtable[fd] == NULL ) {
 		return EBADF;
 	} else {
-		fh = curthread->t_fdtable[fd];
 		lock_acquire(fh->mutex);
 		fh->ref_count--;
 		if (fh->ref_count == 0) {
