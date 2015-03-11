@@ -223,21 +223,21 @@ pid_t getpid()
 pid_t waitpid(pid_t pid, int *status, int options, int *error)
 {
 
-	//kprintf("\nwaitpid: validating  pid: %d" , (int)pid);
+	kprintf("\nwaitpid: validating  pid: %d" , (int)pid);
 	if(pid < 0 || pid > __PID_MAX || status == NULL){
 		*error = EFAULT;
 		//kprintf("\ninvalid pid");
 		return -1;
 	}
 
-	//kprintf("\nwaitpid: validating  options");
+	kprintf("\nwaitpid: validating  options");
 	if(options != 0){
 		*error = EINVAL;
 		//kprintf("\ninvalid options");
 		return -1;
 	}
 
-	//kprintf("\nwaitpid: current process pid:  %d",getpid());
+	kprintf("\nwaitpid: current process pid:  %d",getpid());
 
 	struct process_block *currentProcess = pid_array[getpid()];
 	struct process_block *childProcess = pid_array[pid];
@@ -251,7 +251,7 @@ pid_t waitpid(pid_t pid, int *status, int options, int *error)
 
 	// Check whether its my child
 	bool isChild = false;
-	//kprintf("\nwaitpid: checking if pid is  child");
+	kprintf("\nwaitpid: checking if pid is  child");
 
 
 
@@ -272,7 +272,7 @@ pid_t waitpid(pid_t pid, int *status, int options, int *error)
 		return -1;
 	}
 
-	//kprintf("\nwaitpid: pid is  child");
+	kprintf("\nwaitpid: pid is  child");
 	lock_acquire(childProcess->process_cv_lock); // dummy lock
 	if(!childProcess->exited){
 		//kprintf("\nwaitpid: cv waiting");
@@ -280,14 +280,14 @@ pid_t waitpid(pid_t pid, int *status, int options, int *error)
 	}
 	else
 	{
-		//kprintf("\n child process alread exited");
+		kprintf("\n child process alread exited");
 	}
 
 	*status = childProcess->exitcode;
 
 	//remove_child(currentProcess->child, pid);
 
-	//kprintf("\nwaitpid: cv waiting done. destroying child process");
+	kprintf("\nwaitpid: cv waiting done. destroying child process");
 	currentProcess->childpid[pid] = false;
 
 	// uncomment it may cause memory leak
@@ -302,7 +302,7 @@ pid_t waitpid(pid_t pid, int *status, int options, int *error)
 
 void _exit(int exitcode){
 
-	//kprintf("process %d exiting\n" , (int)getpid() );
+	kprintf("process %d exiting\n" , (int)getpid() );
 
 	struct process_block *currentProcess = pid_array[getpid()];
 
@@ -310,13 +310,13 @@ void _exit(int exitcode){
 	{
 		currentProcess->exited = true;
 		currentProcess->exitcode = _MKWAIT_EXIT(exitcode);
-		//kprintf("cving child process\n");
+		kprintf("cving child process\n");
 		cv_broadcast(currentProcess->process_cv,currentProcess->process_cv_lock);
-		//kprintf("cving child process done\n");
+		kprintf("cving child process done\n");
 	}
 	else
 	{
-		//kprintf("curremt process is null. something wrong\n");
+		kprintf("curremt process is null. something wrong\n");
 	}
 }
 
