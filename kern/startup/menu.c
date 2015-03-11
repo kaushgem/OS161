@@ -159,7 +159,7 @@ common_prog(int nargs, char **args)
 	//lock_release(pid_array_lock);
 
 	int status,error;
-	kprintf("pid %d\n", (int)t1->pid);
+	//kprintf("pid %d\n", (int)t1->pid);
 	//kprintf("waiting for process to exit\n");
 
 	waitpid(t1->pid,&status, 0, &error);
