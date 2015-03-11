@@ -128,41 +128,41 @@ void remove_child(struct child* childlist, pid_t child_pid){
 
 pid_t fork(struct trapframe *ptf, int *error)
 {
-	struct trapframe *tf_copy;
-	copyin((const_userptr_t)ptf, tf_copy, sizeof(struct trapframe));
-	struct addrspace *adrs_copy = copy_parent_addrspace(curthread->t_addrspace);
+	struct trapframe *ctf;
+	ctf = kmalloc(sizeof(struct trapframe));
+	memcpy(ctf,ptf, sizeof(struct trapframe));
+	struct addrspace caddr;
+	as_copy(curthread->t_addrspace, &caddr);
 	struct thread *child_thread;
 
-	*error = thread_fork2("fork",
+	*error = thread_fork("fork",
 			child_fork_entry,
-			(void*)tf_copy,
-			(unsigned long)adrs_copy,
+			(void*)ctf,
+			(unsigned long)caddr,
 			&child_thread);
 
 	if(*error > 0){
 		return -1;
 	}
 
-	// make child thread runnable
-	thread_make_runnable2(child_thread, false);
 
 	return child_thread->pid;
 }
 
 void child_fork_entry(void *data1, unsigned long data2)
 {
-	struct trapframe *tf_copy = (struct trapframe *)data1;
-	struct addrspace *adrs_copy = (struct addrspace *)data2;
+	struct trapframe *ctf = (struct trapframe *)data1;
+	struct addrspace *caddr = (struct addrspace *)data2;
 
-	tf_copy->tf_a3= 0;
-	tf_copy->tf_v0= 0;
-	tf_copy->tf_epc = tf_copy->tf_epc+4;
+	ctf->tf_a3= 0;
+	ctf->tf_v0= 0;
+	ctf->tf_epc = ctf->tf_epc+4;
 
-	curthread->t_addrspace = adrs_copy;
+	curthread->t_addrspace = caddr;
 	as_activate(curthread->t_addrspace);
 
 	struct trapframe tf;
-	memcpy(&tf,tf_copy,sizeof(struct trapframe));
+	memcpy(&tf,ctf,sizeof(struct trapframe));
 	mips_usermode(&tf);
 	//KASSERT(SAME_STACK(cpustacks[curcpu->c_number]-1, (vaddr_t)tf_copy));
 }
