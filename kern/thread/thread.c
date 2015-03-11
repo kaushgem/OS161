@@ -529,6 +529,17 @@ thread_fork(const char *name,
 		newthread->t_cwd = curthread->t_cwd;
 	}
 
+	/*
+	 * Because new threads come out holding the cpu runqueue lock
+	 * (see notes at bottom of thread_switch), we need to account
+	 * for the spllower() that will be done releasing it.
+	 */
+	newthread->t_iplhigh_count++;
+
+	/* Set up the switchframe so entrypoint() gets called */
+	switchframe_init(newthread, entrypoint, data1, data2);
+
+
 	// Copying File Descriptor table
 	for(int i=0; i<__OPEN_MAX; i++){
 		newthread->t_fdtable[i] = curthread->t_fdtable[i];
@@ -557,20 +568,11 @@ thread_fork(const char *name,
 
 	// *************************
 
-	/*
-	 * Because new threads come out holding the cpu runqueue lock
-	 * (see notes at bottom of thread_switch), we need to account
-	 * for the spllower() that will be done releasing it.
-	 */
-	newthread->t_iplhigh_count++;
-
-	/* Set up the switchframe so entrypoint() gets called */
-	switchframe_init(newthread, entrypoint, data1, data2);
-
 	/* Lock the current cpu's run queue and make the new thread runnable */
-	kprintf("\n abcdthread: %d / %d \n",(int)getpid(),(int)cpid);
+	splraise(0,1);
+	kprintf("\n--> %d / %d \n",(int)getpid(),(int)cpid);
 	thread_make_runnable(newthread, false);
-
+	spllower(1,0);
 	/*
 	 * Return new thread structure if it's wanted. Note that using
 	 * the thread structure from the parent thread should be done
