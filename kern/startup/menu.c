@@ -140,13 +140,12 @@ common_prog(int nargs, char **args)
 	pid_array_lock = lock_create("global");
 
 	struct process_block  *pb = init_process_block(getpid());
+	lock_acquire(pid_array_lock);
 	pid_t mypid = allocate_processid();
 	curthread->pid = mypid;
 	//kprintf("menu process pid: %d",(int)mypid);
-
-	//lock_acquire(pid_array_lock);
 	pid_array[mypid] = pb;
-	//lock_release(pid_array_lock);
+	lock_release(pid_array_lock);
 
 	result = thread_fork(args[0] /* thread name */,
 			cmd_progthread /* thread function */,
