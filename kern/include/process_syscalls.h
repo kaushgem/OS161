@@ -24,6 +24,7 @@ struct process_block
 	bool exited;
 	int exitcode;
 	//struct thread* t;
+	bool childpid[__PID_MAX];
 	struct child *child;
 };
 
@@ -32,6 +33,16 @@ struct child
 	pid_t pid;
 	struct child *next;
 };
+
+pid_t allocate_processid(void);
+struct process_block  *init_process_block(pid_t parenpid);
+void destroy_process_block(struct process_block* process);
+void destroy_childlist(struct child* childlist);
+void add_child(struct child* childlist, pid_t child_pid);
+void remove_child(struct child* childlist, pid_t child_pid);
+struct addrspace *copy_parent_addrspace(struct addrspace *padrs);
+struct trapframe *copy_parent_trapframe(struct  trapframe *ptf);
+void child_fork_entry(void *data1, unsigned long data2);
 
 pid_t getpid(void);
 pid_t waitpid(pid_t pid, int *status, int options, int *error);

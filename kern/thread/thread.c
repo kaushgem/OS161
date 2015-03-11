@@ -48,6 +48,7 @@
 #include <mainbus.h>
 #include <vnode.h>
 #include <file_syscalls.h>
+#include <process_syscalls.h>
 
 #include "opt-synchprobs.h"
 #include "opt-defaultscheduler.h"
@@ -126,6 +127,7 @@ thread_create(const char *name)
 	if (thread == NULL) {
 		return NULL;
 	}
+	thread->pid = -1;
 
 	thread->t_name = kstrdup(name);
 	if (thread->t_name == NULL) {
@@ -180,7 +182,7 @@ cpu_create(unsigned hardware_number)
 	if (c == NULL) {
 		panic("cpu_create: Out of memory\n");
 	}
-	
+
 	c->c_self = c;
 	c->c_hardware_number = hardware_number;
 
@@ -424,7 +426,7 @@ thread_start_cpus(void)
 
 	cpu_startup_sem = sem_create("cpu_hatch", 0);
 	mainbus_start_cpus();
-	
+
 	for (i=0; i<cpuarray_num(&allcpus) - 1; i++) {
 		P(cpu_startup_sem);
 	}
@@ -488,9 +490,9 @@ thread_make_runnable2(struct thread *target, bool already_have_lock){
  */
 int
 thread_fork(const char *name,
-	    void (*entrypoint)(void *data1, unsigned long data2),
-	    void *data1, unsigned long data2,
-	    struct thread **ret)
+		void (*entrypoint)(void *data1, unsigned long data2),
+		void *data1, unsigned long data2,
+		struct thread **ret)
 {
 	struct thread *newthread;
 
@@ -532,6 +534,20 @@ thread_fork(const char *name,
 		}
 	}
 
+	// *************************
+	// allocate process id
+	pid_t cpid = allocate_processid(); // remember to handle fork bomb
+	newthread->pid = cpid;
+	kprintf("assignig pid to new thread: %d",(int) newthread->pid);
+	struct process_block  *cpb = init_process_block(getpid());
+	// assign it to global static array
+	//lock_acquire(pid_array_lock);
+	//add_child(pid_array[getpid()]->child,cpid);
+	pid_array[getpid()]->childpid[cpid]=true;
+	pid_array[cpid] = cpb;
+	//lock_release(pid_array_lock);
+
+	// *************************
 
 	/*
 	 * Because new threads come out holding the cpu runqueue lock
@@ -562,9 +578,9 @@ thread_fork(const char *name,
 
 int
 thread_fork2(const char *name,
-	    void (*entrypoint)(void *data1, unsigned long data2),
-	    void *data1, unsigned long data2,
-	    struct thread **ret)
+		void (*entrypoint)(void *data1, unsigned long data2),
+		void *data1, unsigned long data2,
+		struct thread **ret)
 {
 	struct thread *newthread;
 
@@ -605,6 +621,21 @@ thread_fork2(const char *name,
 		}
 	}
 
+
+	// *************************
+	// allocate process id
+	pid_t cpid = allocate_processid(); // remember to handle fork bomb
+	newthread->pid = cpid;
+	kprintf("assignig pid to new thread: %d",(int) newthread->pid);
+	struct process_block  *cpb = init_process_block(getpid());
+	// assign it to global static array
+	//lock_acquire(pid_array_lock);
+	//add_child(pid_array[getpid()]->child,cpid);
+	pid_array[getpid()]->childpid[cpid]=true;
+	pid_array[cpid] = cpb;
+	//lock_release(pid_array_lock);
+
+	// *************************
 
 	/*
 	 * Because new threads come out holding the cpu runqueue lock
@@ -681,13 +712,13 @@ thread_switch(threadstate_t newstate, struct wchan *wc)
 
 	/* Put the thread in the right place. */
 	switch (newstate) {
-	    case S_RUN:
+	case S_RUN:
 		panic("Illegal S_RUN in thread_switch\n");
 		break;
-	    case S_READY:
+	case S_READY:
 		thread_make_runnable(cur, true /*have lock*/);
 		break;
-	    case S_SLEEP:
+	case S_SLEEP:
 		cur->t_wchan_name = wc->wc_name;
 		/*
 		 * Add the thread to the list in the wait channel, and
@@ -705,7 +736,7 @@ thread_switch(threadstate_t newstate, struct wchan *wc)
 		threadlist_addtail(&wc->wc_threads, cur);
 		wchan_unlock(wc);
 		break;
-	    case S_ZOMBIE:
+	case S_ZOMBIE:
 		cur->t_wchan_name = "ZOMBIE";
 		threadlist_addtail(&curcpu->c_zombies, cur);
 		break;
@@ -830,7 +861,7 @@ thread_switch(threadstate_t newstate, struct wchan *wc)
  */
 void
 thread_startup(void (*entrypoint)(void *data1, unsigned long data2),
-	       void *data1, unsigned long data2)
+		void *data1, unsigned long data2)
 {
 	struct thread *cur;
 
@@ -920,7 +951,7 @@ thread_exit(void)
 	thread_checkstack(cur);
 
 	/* Interrupts off on this processor */
-        splhigh();
+	splhigh();
 	thread_switch(S_ZOMBIE, NULL);
 	panic("The zombie walks!\n");
 }
@@ -947,14 +978,14 @@ thread_yield(void)
 void
 schedule(void)
 {
-  // 28 Feb 2012 : GWA : Leave the default scheduler alone!
+	// 28 Feb 2012 : GWA : Leave the default scheduler alone!
 }
 #else
 void
 schedule(void)
 {
-  // 28 Feb 2012 : GWA : Implement your scheduler that prioritizes
-  // "interactive" threads here.
+	// 28 Feb 2012 : GWA : Implement your scheduler that prioritizes
+	// "interactive" threads here.
 }
 #endif
 
@@ -1049,8 +1080,8 @@ thread_consider_migration(void)
 			t->t_cpu = c;
 			threadlist_addtail(&c->c_runqueue, t);
 			DEBUG(DB_THREADS,
-			      "Migrated thread %s: cpu %u -> %u",
-			      t->t_name, curcpu->c_number, c->c_number);
+					"Migrated thread %s: cpu %u -> %u",
+					t->t_name, curcpu->c_number, c->c_number);
 			to_send--;
 			if (c->c_isidle) {
 				/*
@@ -1303,7 +1334,7 @@ interprocessor_interrupt(void)
 		spinlock_acquire(&curcpu->c_runqueue_lock);
 		if (!curcpu->c_isidle) {
 			kprintf("cpu%d: offline: warning: not idle\n",
-				curcpu->c_number);
+					curcpu->c_number);
 		}
 		spinlock_release(&curcpu->c_runqueue_lock);
 		kprintf("cpu%d: offline.\n", curcpu->c_number);

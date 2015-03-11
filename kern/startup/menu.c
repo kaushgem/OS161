@@ -40,9 +40,12 @@
 #include <sfs.h>
 #include <syscall.h>
 #include <test.h>
+#include <current.h>
 #include "opt-synchprobs.h"
 #include "opt-sfs.h"
 #include "opt-net.h"
+
+#include <process_syscalls.h>
 
 /*
  * In-kernel menu and command dispatcher.
@@ -55,7 +58,7 @@
 // XXX this should not be in this file
 void
 getinterval(time_t s1, uint32_t ns1, time_t s2, uint32_t ns2,
-	    time_t *rs, uint32_t *rns)
+		time_t *rs, uint32_t *rns)
 {
 	if (ns2 < ns1) {
 		ns2 += 1000000000;
@@ -103,7 +106,7 @@ cmd_progthread(void *ptr, unsigned long nargs)
 	result = runprogram(progname);
 	if (result) {
 		kprintf("Running program %s failed: %s\n", args[0],
-			strerror(result));
+				strerror(result));
 		return;
 	}
 
@@ -130,13 +133,38 @@ common_prog(int nargs, char **args)
 
 #if OPT_SYNCHPROBS
 	kprintf("Warning: this probably won't work with a "
-		"synchronization-problems kernel.\n");
+			"synchronization-problems kernel.\n");
 #endif
+
+	struct thread *t1;
+	pid_array_lock = lock_create("global");
+
+	struct process_block  *pb = init_process_block(getpid());
+	pid_t mypid = allocate_processid();
+	curthread->pid = mypid;
+	kprintf("menu process pid: %d",(int)mypid);
+
+	//lock_acquire(pid_array_lock);
+	pid_array[mypid] = pb;
+	//lock_release(pid_array_lock);
 
 	result = thread_fork(args[0] /* thread name */,
 			cmd_progthread /* thread function */,
 			args /* thread arg */, nargs /* thread arg */,
-			NULL);
+			&t1);
+
+	//lock_acquire(pid_array_lock);
+	pb->childpid[t1->pid]=true;
+	//add_child(pid_array[getpid()]->child,t1->pid);
+	//lock_release(pid_array_lock);
+
+	int status,error;
+	kprintf("pid %d\n", (int)t1->pid);
+	kprintf("waiting for process to exit\n");
+
+	waitpid(t1->pid,&status, 0, &error);
+
+	kprintf("exited\n");
 	if (result) {
 		kprintf("thread_fork failed: %s\n", strerror(result));
 		return result;
@@ -283,9 +311,9 @@ static const struct {
 	int (*func)(const char *device);
 } mounttable[] = {
 #if OPT_SFS
-	{ "sfs", sfs_mount },
+		{ "sfs", sfs_mount },
 #endif
-	{ NULL, NULL }
+		{ NULL, NULL }
 };
 
 static
@@ -376,7 +404,7 @@ cmd_kheapstats(int nargs, char **args)
 	(void)args;
 
 	kheap_printstats();
-	
+
 	return 0;
 }
 
@@ -392,7 +420,7 @@ showmenu(const char *name, const char *x[])
 
 	kprintf("\n");
 	kprintf("%s\n", name);
-	
+
 	for (i=ct=0; x[i]; i++) {
 		ct++;
 	}
@@ -410,18 +438,18 @@ showmenu(const char *name, const char *x[])
 }
 
 static const char *opsmenu[] = {
-	"[s]       Shell                     ",
-	"[p]       Other program             ",
-	"[mount]   Mount a filesystem        ",
-	"[unmount] Unmount a filesystem      ",
-	"[bootfs]  Set \"boot\" filesystem     ",
-	"[pf]      Print a file              ",
-	"[cd]      Change directory          ",
-	"[pwd]     Print current directory   ",
-	"[sync]    Sync filesystems          ",
-	"[panic]   Intentional panic         ",
-	"[q]       Quit and shut down        ",
-	NULL
+		"[s]       Shell                     ",
+		"[p]       Other program             ",
+		"[mount]   Mount a filesystem        ",
+		"[unmount] Unmount a filesystem      ",
+		"[bootfs]  Set \"boot\" filesystem     ",
+		"[pf]      Print a file              ",
+		"[cd]      Change directory          ",
+		"[pwd]     Print current directory   ",
+		"[sync]    Sync filesystems          ",
+		"[panic]   Intentional panic         ",
+		"[q]       Quit and shut down        ",
+		NULL
 };
 
 static
@@ -436,28 +464,28 @@ cmd_opsmenu(int n, char **a)
 }
 
 static const char *testmenu[] = {
-	"[at]  Array test                    ",
-	"[bt]  Bitmap test                   ",
-	"[km1] Kernel malloc test            ",
-	"[km2] kmalloc stress test           ",
-	"[tt1] Thread test 1                 ",
-	"[tt2] Thread test 2                 ",
-	"[tt3] Thread test 3                 ",
+		"[at]  Array test                    ",
+		"[bt]  Bitmap test                   ",
+		"[km1] Kernel malloc test            ",
+		"[km2] kmalloc stress test           ",
+		"[tt1] Thread test 1                 ",
+		"[tt2] Thread test 2                 ",
+		"[tt3] Thread test 3                 ",
 #if OPT_NET
-	"[net] Network test                  ",
+		"[net] Network test                  ",
 #endif
-	"[sy1] Semaphore test                ",
-	"[sy2] Lock test             (1)     ",
-	"[sy3] CV test               (1)     ",
-	"[sy5] CV test 2             (1)     ",
-	"[sp1] Whalematching Driver  (1)     ",
-	"[sp2] Stoplight Driver      (1)     ",
-	"[fs1] Filesystem test               ",
-	"[fs2] FS read stress        (4)     ",
-	"[fs3] FS write stress       (4)     ",
-	"[fs4] FS write stress 2     (4)     ",
-	"[fs5] FS create stress      (4)     ",
-	NULL
+		"[sy1] Semaphore test                ",
+		"[sy2] Lock test             (1)     ",
+		"[sy3] CV test               (1)     ",
+		"[sy5] CV test 2             (1)     ",
+		"[sp1] Whalematching Driver  (1)     ",
+		"[sp2] Stoplight Driver      (1)     ",
+		"[fs1] Filesystem test               ",
+		"[fs2] FS read stress        (4)     ",
+		"[fs3] FS write stress       (4)     ",
+		"[fs4] FS write stress 2     (4)     ",
+		"[fs5] FS create stress      (4)     ",
+		NULL
 };
 
 static
@@ -469,20 +497,20 @@ cmd_testmenu(int n, char **a)
 
 	showmenu("OS/161 tests menu", testmenu);
 	kprintf("    (1) These tests will fail until you finish the "
-		"synch assignment.\n");
+			"synch assignment.\n");
 	kprintf("    (4) These tests may fail until you finish the "
-		"file system assignment.\n");
+			"file system assignment.\n");
 	kprintf("\n");
 
 	return 0;
 }
 
 static const char *mainmenu[] = {
-	"[?o] Operations menu                ",
-	"[?t] Tests menu                     ",
-	"[kh] Kernel heap stats              ",
-	"[q] Quit and shut down              ",
-	NULL
+		"[?o] Operations menu                ",
+		"[?t] Tests menu                     ",
+		"[kh] Kernel heap stats              ",
+		"[q] Quit and shut down              ",
+		NULL
 };
 
 static
@@ -504,64 +532,64 @@ static struct {
 	const char *name;
 	int (*func)(int nargs, char **args);
 } cmdtable[] = {
-	/* menus */
-	{ "?",		cmd_mainmenu },
-	{ "h",		cmd_mainmenu },
-	{ "help",	cmd_mainmenu },
-	{ "?o",		cmd_opsmenu },
-	{ "?t",		cmd_testmenu },
+		/* menus */
+		{ "?",		cmd_mainmenu },
+		{ "h",		cmd_mainmenu },
+		{ "help",	cmd_mainmenu },
+		{ "?o",		cmd_opsmenu },
+		{ "?t",		cmd_testmenu },
 
-	/* operations */
-	{ "s",		cmd_shell },
-	{ "p",		cmd_prog },
-	{ "mount",	cmd_mount },
-	{ "unmount",	cmd_unmount },
-	{ "bootfs",	cmd_bootfs },
-	{ "pf",		printfile },
-	{ "cd",		cmd_chdir },
-	{ "pwd",	cmd_pwd },
-	{ "sync",	cmd_sync },
-	{ "panic",	cmd_panic },
-	{ "q",		cmd_quit },
-	{ "exit",	cmd_quit },
-	{ "halt",	cmd_quit },
+		/* operations */
+		{ "s",		cmd_shell },
+		{ "p",		cmd_prog },
+		{ "mount",	cmd_mount },
+		{ "unmount",	cmd_unmount },
+		{ "bootfs",	cmd_bootfs },
+		{ "pf",		printfile },
+		{ "cd",		cmd_chdir },
+		{ "pwd",	cmd_pwd },
+		{ "sync",	cmd_sync },
+		{ "panic",	cmd_panic },
+		{ "q",		cmd_quit },
+		{ "exit",	cmd_quit },
+		{ "halt",	cmd_quit },
 
 
-	/* stats */
-	{ "kh",         cmd_kheapstats },
+		/* stats */
+		{ "kh",         cmd_kheapstats },
 
-	/* base system tests */
-	{ "at",		arraytest },
-	{ "bt",		bitmaptest },
-	{ "km1",	malloctest },
-	{ "km2",	mallocstress },
+		/* base system tests */
+		{ "at",		arraytest },
+		{ "bt",		bitmaptest },
+		{ "km1",	malloctest },
+		{ "km2",	mallocstress },
 #if OPT_NET
-	{ "net",	nettest },
+		{ "net",	nettest },
 #endif
-	{ "tt1",	threadtest },
-	{ "tt2",	threadtest2 },
-	{ "tt3",	threadtest3 },
-	{ "sy1",	semtest },
+		{ "tt1",	threadtest },
+		{ "tt2",	threadtest2 },
+		{ "tt3",	threadtest3 },
+		{ "sy1",	semtest },
 
-	/* synchronization assignment tests */
-	{ "sy2",	locktest },
-	{ "sy3",	cvtest },
-	{ "sy5",	cvtest2 },
-	
+		/* synchronization assignment tests */
+		{ "sy2",	locktest },
+		{ "sy3",	cvtest },
+		{ "sy5",	cvtest2 },
+
 #if OPT_SYNCHPROBS
-  /* synchronization problem tests */
-  { "sp1", whalemating },
-  { "sp2", stoplight },
+		/* synchronization problem tests */
+		{ "sp1", whalemating },
+		{ "sp2", stoplight },
 #endif
 
-	/* file system assignment tests */
-	{ "fs1",	fstest },
-	{ "fs2",	readstress },
-	{ "fs3",	writestress },
-	{ "fs4",	writestress2 },
-	{ "fs5",	createstress },
+		/* file system assignment tests */
+		{ "fs1",	fstest },
+		{ "fs2",	readstress },
+		{ "fs3",	writestress },
+		{ "fs4",	writestress2 },
+		{ "fs5",	createstress },
 
-	{ NULL, NULL }
+		{ NULL, NULL }
 };
 
 /*
@@ -580,8 +608,8 @@ cmd_dispatch(char *cmd)
 	int i, result;
 
 	for (word = strtok_r(cmd, " \t", &context);
-	     word != NULL;
-	     word = strtok_r(NULL, " \t", &context)) {
+			word != NULL;
+			word = strtok_r(NULL, " \t", &context)) {
 
 		if (nargs >= MAXMENUARGS) {
 			kprintf("Command line has too many words\n");
@@ -604,12 +632,12 @@ cmd_dispatch(char *cmd)
 
 			gettime(&aftersecs, &afternsecs);
 			getinterval(beforesecs, beforensecs,
-				    aftersecs, afternsecs,
-				    &secs, &nsecs);
+					aftersecs, afternsecs,
+					&secs, &nsecs);
 
 			kprintf("Operation took %lu.%09lu seconds\n",
-				(unsigned long) secs,
-				(unsigned long) nsecs);
+					(unsigned long) secs,
+					(unsigned long) nsecs);
 
 			return result;
 		}
@@ -635,8 +663,8 @@ menu_execute(char *line, int isargs)
 	int result;
 
 	for (command = strtok_r(line, ";", &context);
-	     command != NULL;
-	     command = strtok_r(NULL, ";", &context)) {
+			command != NULL;
+			command = strtok_r(NULL, ";", &context)) {
 
 		if (isargs) {
 			kprintf("OS/161 kernel: %s\n", command);
