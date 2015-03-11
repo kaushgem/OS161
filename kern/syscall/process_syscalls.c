@@ -21,12 +21,8 @@
 
 pid_t allocate_processid()
 {
-
-	for( pid_t i=5; i <__PID_MAX; i++)
-	{
-		if(pid_array[i] == NULL)
-		{
-
+	for( pid_t i=5; i <__PID_MAX; i++){
+		if(pid_array[i] == NULL){
 			return i;
 		}
 	}
@@ -38,11 +34,8 @@ struct process_block *init_process_block(pid_t parentpid)
 	struct process_block *pb;
 	pb = (struct process_block*) kmalloc(sizeof(struct process_block));
 	pb->parent_pid = parentpid;
-	// pb->process_cv=cv_create("processcv");
 	pb->process_sem = sem_create("proc_sem",0);
-	//pb->process_cv_lock = lock_create("processlock");
 	pb->exited = false;
-	//pb->t = NULL;
 
 	for( int i=0; i < __PID_MAX ; i++)
 	{
@@ -50,14 +43,11 @@ struct process_block *init_process_block(pid_t parentpid)
 	}
 
 	pb->exitcode = 0;
-	// pb->child = NULL;
 	return pb;
 }
 
 void destroy_process_block(struct process_block* process){
 
-	// cv_destroy(process->process_cv);
-	//kprintf("\n destroy_process_block: cv destoryed");
 	//lock_destroy(process->process_cv_lock);
 	//kprintf("\n destroy_process_block: lock destoryed");
 	//destroy_childlist(process->child);

@@ -19,11 +19,9 @@ struct lock* pid_array_lock;
 struct process_block
 {
 	pid_t parent_pid;
-	// struct cv *process_cv;
 	//struct lock *process_cv_lock;
 	bool exited;
 	int exitcode;
-	//struct thread* t;
 	bool childpid[__PID_MAX];
 	// struct thread *t;
 	//struct child *child;
