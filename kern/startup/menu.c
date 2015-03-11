@@ -142,7 +142,7 @@ common_prog(int nargs, char **args)
 	struct process_block  *pb = init_process_block(getpid());
 	pid_t mypid = allocate_processid();
 	curthread->pid = mypid;
-	kprintf("menu process pid: %d",(int)mypid);
+	//kprintf("menu process pid: %d",(int)mypid);
 
 	//lock_acquire(pid_array_lock);
 	pid_array[mypid] = pb;
@@ -160,7 +160,7 @@ common_prog(int nargs, char **args)
 
 	int status,error;
 	kprintf("pid %d\n", (int)t1->pid);
-	kprintf("waiting for process to exit\n");
+	//kprintf("waiting for process to exit\n");
 
 	waitpid(t1->pid,&status, 0, &error);
 

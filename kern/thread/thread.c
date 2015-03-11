@@ -538,7 +538,7 @@ thread_fork(const char *name,
 	// allocate process id
 	pid_t cpid = allocate_processid(); // remember to handle fork bomb
 	newthread->pid = cpid;
-	kprintf("assignig pid to new thread: %d",(int) newthread->pid);
+	//kprintf("assignig pid to new thread: %d",(int) newthread->pid);
 	struct process_block  *cpb = init_process_block(getpid());
 	// assign it to global static array
 	//lock_acquire(pid_array_lock);
@@ -626,7 +626,7 @@ thread_fork2(const char *name,
 	// allocate process id
 	pid_t cpid = allocate_processid(); // remember to handle fork bomb
 	newthread->pid = cpid;
-	kprintf("assignig pid to new thread: %d",(int) newthread->pid);
+	//kprintf("assignig pid to new thread: %d",(int) newthread->pid);
 	struct process_block  *cpb = init_process_block(getpid());
 	// assign it to global static array
 	//lock_acquire(pid_array_lock);
