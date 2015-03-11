@@ -568,6 +568,7 @@ thread_fork(const char *name,
 	switchframe_init(newthread, entrypoint, data1, data2);
 
 	/* Lock the current cpu's run queue and make the new thread runnable */
+	kprintf("\n abcdthread: %d / %d \n",(int)getpid(),(int)cpid);
 	thread_make_runnable(newthread, false);
 
 	/*

@@ -229,8 +229,6 @@ pid_t getpid()
 
 pid_t waitpid(pid_t pid, int *status, int options, int *error)
 {
-
-
 	if(pid < 0 || pid > __PID_MAX || status == NULL){
 		*error = EFAULT;
 		//kprintf("\ninvalid pid");
@@ -245,7 +243,6 @@ pid_t waitpid(pid_t pid, int *status, int options, int *error)
 	}
 
 	//kprintf("\nwaitpid: current process pid:  %d",getpid());
-
 	struct process_block *currentProcess = pid_array[getpid()];
 	struct process_block *childProcess = pid_array[pid];
 
@@ -259,8 +256,6 @@ pid_t waitpid(pid_t pid, int *status, int options, int *error)
 	// Check whether its my child
 	bool isChild = false;
 	//kprintf("\nwaitpid: checking if pid is  child");
-
-
 
 	/*while(currentProcess->child){
 		kprintf(" \nwaitpid: currentProcess->child: %d pid: %d",(int)currentProcess->child, (int)pid );
@@ -282,7 +277,6 @@ pid_t waitpid(pid_t pid, int *status, int options, int *error)
 	// kprintf("\nwaitpid: waiting for the child pid %d to exit",(int)pid);
 	if(!childProcess->exited){
 		//kprintf("\nwaitpid: cv waiting");
-
 		P(childProcess->process_sem);
 	}
 	else
@@ -299,16 +293,9 @@ pid_t waitpid(pid_t pid, int *status, int options, int *error)
 	currentProcess->childpid[pid] = false;
 
 	// uncomment it may cause memory leak
-
 	//kprintf("\n destroying process: %d",(int)pid);
 	destroy_process_block(childProcess);
 	pid_array[pid] = NULL;
-
-
-	//lock_acquire(pid_array_lock);
-
-	//lock_release(pid_array_lock);
-
 	return pid;
 }
 
