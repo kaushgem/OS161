@@ -569,10 +569,10 @@ thread_fork(const char *name,
 	// *************************
 
 	/* Lock the current cpu's run queue and make the new thread runnable */
-	splraise(0,1);
-	kprintf("\n--> %d / %d \n",(int)getpid(),(int)cpid);
+	//splraise(0,1);
+	//kprintf("\n--> %d / %d \n",(int)getpid(),(int)cpid);
 	thread_make_runnable(newthread, false);
-	spllower(1,0);
+	//spllower(1,0);
 	/*
 	 * Return new thread structure if it's wanted. Note that using
 	 * the thread structure from the parent thread should be done

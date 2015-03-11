@@ -120,24 +120,27 @@ void remove_child(struct child* childlist, pid_t child_pid){
 
 pid_t fork(struct trapframe *ptf, int *error)
 {
-	struct trapframe *ctf;
+	struct trapframe *ctf = NULL;
 	ctf = kmalloc(sizeof(struct trapframe));
+	if(ctf == NULL){
+		return -1;
+	}
 	memcpy(ctf,ptf, sizeof(struct trapframe));
-	struct addrspace *caddr;
 
+	struct addrspace *caddr = NULL;
 	as_copy(curthread->t_addrspace, &caddr);
+
 	struct thread *child_thread;
 
 	*error = thread_fork("fork",
 			child_fork_entry,
-			(void*)ctf,
+			ctf,
 			(unsigned long)caddr,
 			&child_thread);
 
 	if(*error > 0){
 		return -1;
 	}
-
 
 	return child_thread->pid;
 }
@@ -274,7 +277,7 @@ pid_t waitpid(pid_t pid, int *status, int options, int *error)
 		//kprintf("\n child process alread exited");
 	}
 
-	// kprintf("\nwaitpid:  child pid %d exited",(int)pid);
+	//kprintf("\nwaitpid:  child pid %d exited\n",(int)pid);
 	*status = childProcess->exitcode;
 
 	//remove_child(currentProcess->child, pid);
