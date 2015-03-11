@@ -154,6 +154,7 @@ test(int nowait)
 	putchar('3');
 	check();
 
+
 	/*
 	 * These must be called in reverse order to avoid waiting
 	 * improperly.
@@ -162,6 +163,8 @@ test(int nowait)
 	dowait(nowait, pid2);
 	dowait(nowait, pid1);
 	dowait(nowait, pid0);
+
+
 
 	putchar('\n');
 }
