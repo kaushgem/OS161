@@ -159,8 +159,8 @@ common_prog(int nargs, char **args)
 	//lock_release(pid_array_lock);
 
 	int status,error;
-	kprintf("pid %d\n", (int)t1->pid);
-	kprintf("waiting for process to exit\n");
+	//kprintf("pid %d\n", (int)t1->pid);
+	//kprintf("waiting for process to exit\n");
 
 	if(t1!=NULL)
 	{
@@ -171,7 +171,7 @@ common_prog(int nargs, char **args)
 		}
 	}
 
-	kprintf("pid %d exited \n", (int)t1->pid);
+	//kprintf("pid %d exited \n", (int)t1->pid);
 
 	if (result) {
 		kprintf("thread_fork failed: %s\n", strerror(result));

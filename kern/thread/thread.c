@@ -251,7 +251,11 @@ thread_destroy(struct thread *thread)
 	 * If you add things to struct thread, be sure to clean them up
 	 * either here or in thread_exit(). (And not both...)
 	 */
-	KASSERT(thread->t_fdtable == NULL);
+	/*if(thread->t_fdtable!=NULL)
+	{
+		kfree(thread->t_fdtable);
+	}
+	KASSERT(thread->t_fdtable == NULL);*/
 
 	/* VFS fields, cleaned up in thread_exit */
 	KASSERT(thread->t_cwd == NULL);
@@ -947,6 +951,13 @@ thread_exit(void)
 		as_destroy(as);
 	}
 
+	struct process_block *currentProcess = pid_array[getpid()];
+	//cv_broadcast(currentProcess->process_cv,currentProcess->process_cv_lock);
+
+	if(currentProcess!=NULL)
+	{
+		V(currentProcess->process_sem);
+	}
 	/* Check the stack guard band. */
 	thread_checkstack(cur);
 
