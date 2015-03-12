@@ -393,6 +393,7 @@ thread_bootstrap(void)
 	curcpu->c_curthread = curthread;
 
 	/* Done */
+	spinlock_init(&pid_array_spinlock);
 }
 
 /*
@@ -498,30 +499,12 @@ thread_fork(const char *name,
 
 	// *************************
 	// allocate process id
-	lock_acquire(pid_array_lock);
-	pid_t cpid = allocate_processid(); // remember to handle fork bomb
-	if(cpid<0){
-		return ENOMEM;
-	}
 
-	//kprintf("assignig pid to new thread: %d",(int) newthread->pid);
-	struct process_block  *cpb = init_process_block(getpid());
-	if(cpb==NULL){
-		return ENOMEM;
-	}
-	//add_child(pid_array[getpid()]->child,cpid);
-
-	int t = splhigh();
-	//kprintf("\n  current process: %d child process: %d \n", (int)getpid(), (int) cpid);
-	splx(t);
-	pid_array[getpid()]->childpid[cpid]=true;
-	pid_array[cpid] = cpb;
-	lock_release(pid_array_lock);
 
 
 
 	newthread = thread_create(name);
-	newthread->pid = cpid;
+
 	if (newthread == NULL) {
 		return ENOMEM;
 	}
@@ -568,6 +551,32 @@ thread_fork(const char *name,
 			newthread->t_fdtable[i]->ref_count++;
 		}
 	}
+
+
+
+	//lock_acquire(pid_array_lock);
+
+	spinlock_acquire(&pid_array_spinlock);
+	pid_t cpid = allocate_processid(); // remember to handle fork bomb
+	if(cpid<0){
+		return ENOMEM;
+	}
+
+	//kprintf("assignig pid to new thread: %d",(int) newthread->pid);
+	struct process_block  *cpb = init_process_block(getpid());
+	if(cpb==NULL){
+		return ENOMEM;
+	}
+	//add_child(pid_array[getpid()]->child,cpid);
+	newthread->pid = cpid;
+	int t = splhigh();
+	//kprintf("\n  current process: %d child process: %d \n", (int)getpid(), (int) cpid);
+	splx(t);
+	pid_array[getpid()]->childpid[cpid]=true;
+	pid_array[cpid] = cpb;
+	//lock_release(pid_array_lock);
+	spinlock_release(&pid_array_spinlock);
+
 
 
 

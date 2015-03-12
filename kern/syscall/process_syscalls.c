@@ -139,7 +139,6 @@ pid_t fork(struct trapframe *ptf, int *error)
 	}
 
 	struct thread *child_thread;
-
 	*error = thread_fork("fork",
 			child_fork_entry,
 			ctf,
