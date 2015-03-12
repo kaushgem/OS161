@@ -78,8 +78,6 @@ runprogram(char *progname, char *argv[], int argc)
 		}
 	}
 
-
-
 	/* Open the file. */
 	result = vfs_open(progname, O_RDONLY, 0, &v);
 	if (result) {
@@ -144,25 +142,31 @@ runprogram(char *progname, char *argv[], int argc)
 	// Loading user stack from kernel buffer
 
 	int i;
-	unsigned int stackptr_for_argv[argc+1];
+	vaddr_t kargv[argc];
 	size_t len_from_top = 0;
 
 	if(argc > 0)
 	{
+		// Fill args
 		for(i=0 ; i < argc ; i++){
 			len_from_top = len_from_top + size_with_padding[i];
-			stackptr_for_argv[i] = stackptr - len_from_top;
-			copyout(kernel_buffer[i], (void*) stackptr_for_argv[i], size_with_padding[i]*sizeof(int32_t));
+			kargv[i] = (vaddr_t) stackptr - len_from_top;
+			copyout(kernel_buffer[i], (void*) kargv[i], size_with_padding[i]*sizeof(int32_t));
 		}
-		stackptr_for_argv[i] = 0; // Last element to identify end of arg
-		size_t size_of_argv_ptrs = sizeof(unsigned int)*(argc+1);
-		size_t total_len = len_from_top + size_of_argv_ptrs;
-		userptr_t user_args_stackptr = (userptr_t) stackptr - total_len;
 
-		copyout(stackptr_for_argv, user_args_stackptr, size_of_argv_ptrs);
+		// Fill end point (NULL)
+		stackptr = stackptr - len_from_top - sizeof(int32_t);
+		char *end = NULL;
+		copyout((const void*) end, (userptr_t) stackptr, sizeof(int32_t));
+
+		// Fill args address
+		for(i=0 ; i < argc ; i++){
+			stackptr = stackptr - sizeof(int32_t);
+			copyout((void*) kargv[i], (userptr_t) stackptr, sizeof(int32_t));
+		}
 
 		/* Warp to user mode. */
-		enter_new_process( argc /*argc*/, user_args_stackptr /*userspace addr of argv*/,
+		enter_new_process( argc /*argc*/, (userptr_t) stackptr /*userspace addr of argv*/,
 				stackptr, entrypoint);
 	}
 	/* enter_new_process does not return. */
