@@ -314,5 +314,78 @@ void _exit(int exitcode){
 	}
 }
 
-
-
+//
+//int execv(const char *program, char **args)
+//{
+//	struct vnode *v;
+//	vaddr_t entrypoint, stackptr;
+//	int result;
+//
+//	/* Open the file. */
+//	result = vfs_open(program, O_RDONLY, 0, &v);
+//	if (result) {
+//		return result;
+//	}
+//
+//	/* We should be a new thread. */
+//	KASSERT(curthread->t_addrspace == NULL);
+//
+//	/* Create a new address space. */
+//	curthread->t_addrspace = as_create();
+//	if (curthread->t_addrspace==NULL) {
+//		vfs_close(v);
+//		return ENOMEM;
+//	}
+//
+//	/* Activate it. */
+//	as_activate(curthread->t_addrspace);
+//
+//	/* Load the executable. */
+//	result = load_elf(v, &entrypoint);
+//	if (result) {
+//		/* thread_exit destroys curthread->t_addrspace */
+//		vfs_close(v);
+//		return result;
+//	}
+//
+//	/* Done with the file now. */
+//	vfs_close(v);
+//
+//	/* Define the user stack in the address space */
+//	result = as_define_stack(curthread->t_addrspace, &stackptr);
+//	if (result) {
+//		/* thread_exit destroys curthread->t_addrspace */
+//		return result;
+//	}
+//
+//
+//	char ptr[16];
+//
+//	((userptr_t*)ptr)[0] = (userptr_t)0x7FFFFFF8; //stackptr - 16 + 8
+//	((userptr_t*)ptr)[1] = NULL;
+//	ptr[8] = 't';
+//	ptr[9] = 'e';
+//	ptr[10] = 's';
+//	ptr[11] = 't';
+//	ptr[12] = 's';
+//	ptr[13] = '\0';
+//	ptr[14] = '\0';
+//	ptr[15] = '\0';
+//
+//	copyout(ptr, (userptr_t)(stackptr - 16), 16);
+//
+//	enter_new_process(
+//			1, (userptr_t)(stackptr - 16),
+//			stackptr - 16, entrypoint
+//	);
+//
+//
+//	/* Warp to user mode. */
+//	enter_new_process(0 /*argc*/, NULL /*userspace addr of argv*/,
+//			stackptr, entrypoint);
+//
+//	/* enter_new_process does not return. */
+//	panic("enter_new_process returned\n");
+//	return EINVAL;
+//}
+//
