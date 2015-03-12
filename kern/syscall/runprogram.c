@@ -126,26 +126,26 @@ runprogram(char *progname, char **argv, int argc)
 	int i;
 	vaddr_t kargv[argc+1];
 	size_t len_from_top = 0;
-	int arglen = 0;
+	int arglen = 0, arglen_pad=0;
 
 	if(argc > 0)
 	{
 
 		kargv[argc]=0;
-		// Fill args
 		for(i=0 ; i < argc ; i++){
-			arglen = strlen(argv[i])+1 + (4- ((strlen(argv[i])+1)%4));
-			len_from_top = len_from_top + arglen ;
+			arglen = strlen(argv[i])+1;
+			arglen_pad =arglen	+ (4- ((arglen)%4));
+			len_from_top = len_from_top + arglen_pad ;
 			kargv[i] =  stackptr - len_from_top;
-			copyout(argv[i], (userptr_t) kargv[i], arglen);
+			copyout(argv[i], (userptr_t) kargv[i], arglen_pad);
 		}
-		stackptr = stackptr - len_from_top ;
-
-		for(i=argc ; i >=0 ; i--){
-
+		stackptr = stackptr - len_from_top -(argc+1)*sizeof(vaddr_t);
+		for(i=0 ; i <argc+1 ; i++){
 			copyout( &kargv[i], (userptr_t) stackptr, sizeof(vaddr_t));
-			stackptr = stackptr - sizeof(vaddr_t);
+			stackptr = stackptr + sizeof(vaddr_t);
 		}
+
+		stackptr = stackptr -(argc+1)*sizeof(vaddr_t);
 		/* Warp to user mode. */
 		enter_new_process( argc /*argc*/, (userptr_t) stackptr /*userspace addr of argv*/,
 				stackptr, entrypoint);
