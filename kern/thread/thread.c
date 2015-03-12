@@ -476,11 +476,6 @@ thread_make_runnable(struct thread *target, bool already_have_lock)
 	}
 }
 
-void
-thread_make_runnable2(struct thread *target, bool already_have_lock){
-	thread_make_runnable(target, already_have_lock);
-}
-
 /*
  * Create a new thread based on an existing one.
  *

@@ -46,6 +46,7 @@
 #include <test.h>
 #include <file_syscalls.h>
 #include <process_syscalls.h>
+#include <copyinout.h>
 
 /*
  * Load program "progname" and start running it in usermode.
@@ -54,11 +55,30 @@
  * Calls vfs_open on progname and thus may destroy it.
  */
 int
-runprogram(char *progname)//, int argc, char **argv)
+runprogram(char *progname, char *argv[], int argc)
 {
 	struct vnode *v;
 	vaddr_t entrypoint, stackptr;
 	int result;
+
+
+	// Copying arguments into Kernel space
+
+	char *kernel_buffer[argc];
+	size_t size[argc];
+	size_t size_with_padding[argc];
+
+	if(argc > 0)
+	{
+		for(int i=0 ; i < argc ; i++){
+			size[i] = strlen(argv[i])+1;
+			kernel_buffer[i] = kmalloc( sizeof(int32_t) * size[i] );
+			copyin((const_userptr_t) argv[i], (void*) kernel_buffer[i], size[i]);
+			size_with_padding[i] = size[i] + (4 - size[i]%4) /* padding */;
+		}
+	}
+
+
 
 	/* Open the file. */
 	result = vfs_open(progname, O_RDONLY, 0, &v);
@@ -120,33 +140,31 @@ runprogram(char *progname)//, int argc, char **argv)
 	//
 
 
-	// Copying arguments into Kernel space
-	// Loading kernel buffer with padding by 4
 
-//	char *kernel_buffer[argc];
-//
-//
-//	if(argc > 0)
-//	{
-//		for(int i=0 ; i < argc ; i++){
-//			char kernel_buffer[i] = kmalloc(sizeof(int32_t)*(strlen(argv[i])));
-//			size_t padding = strlen(argv[i]) + (4 - strlen(argv[i])%4);
-//			memcpy(kernel_buffer[i], argv[i], padding*sizeof(int32_t));
-//		}
-//
-//
-//
-//		for(int i=0)
-//	}
-//
-//
-//	copyout()
+	// Loading user stack from kernel buffer
 
+	int i;
+	unsigned int stackptr_for_argv[argc+1];
+	size_t len_from_top = 0;
 
-	/* Warp to user mode. */
-	enter_new_process( 0 /*argc*/, NULL /*userspace addr of argv*/,
-			stackptr, entrypoint);
+	if(argc > 0)
+	{
+		for(i=0 ; i < argc ; i++){
+			len_from_top = len_from_top + size_with_padding[i];
+			stackptr_for_argv[i] = stackptr - len_from_top;
+			copyout(kernel_buffer[i], (void*) stackptr_for_argv[i], size_with_padding[i]*sizeof(int32_t));
+		}
+		stackptr_for_argv[i] = 0; // Last element to identify end of arg
+		size_t size_of_argv_ptrs = sizeof(unsigned int)*(argc+1);
+		size_t total_len = len_from_top + size_of_argv_ptrs;
+		userptr_t user_args_stackptr = (userptr_t) stackptr - total_len;
 
+		copyout(stackptr_for_argv, user_args_stackptr, size_of_argv_ptrs);
+
+		/* Warp to user mode. */
+		enter_new_process( argc /*argc*/, user_args_stackptr /*userspace addr of argv*/,
+				stackptr, entrypoint);
+	}
 	/* enter_new_process does not return. */
 	panic("enter_new_process returned\n");
 	return EINVAL;
