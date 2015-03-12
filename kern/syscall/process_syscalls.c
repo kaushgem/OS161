@@ -128,7 +128,11 @@ pid_t fork(struct trapframe *ptf, int *error)
 	memcpy(ctf,ptf, sizeof(struct trapframe));
 
 	struct addrspace *caddr = NULL;
-	as_copy(curthread->t_addrspace, &caddr);
+	*error = as_copy(curthread->t_addrspace, &caddr);
+	// new
+	if(*error > 0){
+		return -1;
+	}
 
 	struct thread *child_thread;
 
@@ -309,8 +313,6 @@ void _exit(int exitcode){
 		kprintf("curremt process is null. something wrong\n");
 	}
 }
-
-
 
 
 

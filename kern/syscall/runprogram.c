@@ -54,16 +54,11 @@
  * Calls vfs_open on progname and thus may destroy it.
  */
 int
-runprogram(char *progname)
+runprogram(char *progname)//, int argc, char **argv)
 {
-
-	// http://jhshi.me/2012/03/14/os161-file-operation-overview/
-
-
 	struct vnode *v;
 	vaddr_t entrypoint, stackptr;
 	int result;
-
 
 	/* Open the file. */
 	result = vfs_open(progname, O_RDONLY, 0, &v);
@@ -122,14 +117,34 @@ runprogram(char *progname)
 	curthread->t_fdtable[2] = create_fhandle(name);
 	vfs_open(name, O_WRONLY, 0664, &(curthread->t_fdtable[2]->vn));
 	kfree(name);
-
-
 	//
 
 
+	// Copying arguments into Kernel space
+	// Loading kernel buffer with padding by 4
+
+//	char *kernel_buffer[argc];
+//
+//
+//	if(argc > 0)
+//	{
+//		for(int i=0 ; i < argc ; i++){
+//			char kernel_buffer[i] = kmalloc(sizeof(int32_t)*(strlen(argv[i])));
+//			size_t padding = strlen(argv[i]) + (4 - strlen(argv[i])%4);
+//			memcpy(kernel_buffer[i], argv[i], padding*sizeof(int32_t));
+//		}
+//
+//
+//
+//		for(int i=0)
+//	}
+//
+//
+//	copyout()
+
 
 	/* Warp to user mode. */
-	enter_new_process(0 /*argc*/, NULL /*userspace addr of argv*/,
+	enter_new_process( 0 /*argc*/, NULL /*userspace addr of argv*/,
 			stackptr, entrypoint);
 
 	/* enter_new_process does not return. */

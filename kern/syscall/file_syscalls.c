@@ -77,13 +77,6 @@ int open(const char *filename, int flags, int mode, int *error) {
 		return -1;
 	}
 
-	//	if (mode != O_CREAT && mode != O_EXCL && mode != O_TRUNC && mode!= O_APPEND)
-	//	{
-	//		*error = EINVAL;
-	//		return -1;
-	//	}
-
-
 	int i;
 	for (i = 3; i < __OPEN_MAX; i++) {
 		if (curthread->t_fdtable[i] == NULL ) {
@@ -109,13 +102,16 @@ int open(const char *filename, int flags, int mode, int *error) {
 	lock_acquire(fh->mutex);
 	*error = vfs_open((char*) kfilename, flags, mode, &fh->vn);
 	lock_release(fh->mutex);
+	if(*error != 0){
+		return -1;
+	}
 
 	return fd;
 }
 
 int close(int fd) {
 	struct fhandle *fh = curthread->t_fdtable[fd];
-	if (fh == NULL ) {
+	if (fh == NULL || fd < 0 || fd > __OPEN_MAX) {
 		return EBADF;
 	} else {
 		lock_acquire(fh->mutex);
@@ -126,19 +122,22 @@ int close(int fd) {
 			delete_fhandle(fd);
 			return 0;
 		}
-		lock_acquire(fh->mutex);
+		lock_release(fh->mutex);
 		return 0;
 	}
 	return 0;
 }
 
 int read(int fd, void *buf, size_t size, int* error) {
-
 	struct fhandle *fh = curthread->t_fdtable[fd];
-	if (fh == NULL ) {
+	if (fh == NULL || fd < 0 || fd > __OPEN_MAX) {
 		*error = EBADF;
 		return -1;
+	} else if (buf == NULL) {
+		*error = EFAULT;
+		return -1;
 	} else {
+
 		lock_acquire(fh->mutex);
 		struct iovec iovec_obj;
 		struct uio uio_obj;
@@ -157,25 +156,18 @@ int read(int fd, void *buf, size_t size, int* error) {
 }
 
 int write(int fd, const void *buf, size_t size, int* error) {
-
 	struct fhandle *fh = curthread->t_fdtable[fd];
-	if (fh == NULL ) {
+	if (fh == NULL || fd < 0 || fd > __OPEN_MAX) {
 		*error = EBADF;
 		return -1;
+	} else if (buf == NULL) {
+		*error = EFAULT;
+		return -1;
 	} else {
+
 		lock_acquire(fh->mutex);
 		struct iovec iovec_obj;
 		struct uio uio_obj;
-
-//		char kfilename[256];
-//		size_t actual;
-
-//		*error = copyinstr((const_userptr_t) buf, kfilename, 256, &actual);
-//		if(*error != 0){
-//			lock_release(fh->mutex);
-//			return -1;
-//		}
-
 		uio_init(&iovec_obj, &uio_obj, (void *) buf, size, fh->offset, UIO_WRITE);
 		*error = VOP_WRITE(fh->vn, &uio_obj);
 		if(*error != 0){
@@ -195,13 +187,18 @@ int write(int fd, const void *buf, size_t size, int* error) {
 
 int dup2(int oldfd, int newfd){
 
-	if(curthread->t_fdtable[oldfd] == NULL ||
-			curthread->t_fdtable[newfd] != NULL ||
-			newfd > __OPEN_MAX ){
+	if(	curthread->t_fdtable[oldfd] == NULL ||
+		curthread->t_fdtable[newfd] != NULL ||
+		newfd > __OPEN_MAX 	)
+	{
 		return EBADF;
-	}else{
+	}
+	else
+	{
 		curthread->t_fdtable[newfd] = curthread->t_fdtable[oldfd];
+		lock_acquire(curthread->t_fdtable[newfd]->mutex);
 		curthread->t_fdtable[newfd]->ref_count++;
+		lock_release(curthread->t_fdtable[newfd]->mutex);
 	}
 	return 0;
 }
@@ -209,9 +206,8 @@ int dup2(int oldfd, int newfd){
 
 off_t lseek(int fd, off_t pos, int whence , int *error)
 {
-	struct fhandle *fh;
-	if (curthread->t_fdtable[fd] == NULL ) {
-		// fd is not a valid file handle.
+	struct fhandle *fh = curthread->t_fdtable[fd];
+	if (fh == NULL || fd < 0 || fd > __OPEN_MAX) {
 		*error = EBADF;
 		return -1;
 	}
@@ -219,13 +215,11 @@ off_t lseek(int fd, off_t pos, int whence , int *error)
 			&& whence !=SEEK_CUR
 			&& whence!=SEEK_END)
 	{
-		// whence is invalid.
 		*error = EINVAL;
 		return -1;
 	}
-	else if(pos <0)
+	else if(pos < 0)
 	{
-		// The resulting seek position would be negative.
 		*error = EINVAL;
 		return -1;
 	}else
@@ -246,6 +240,11 @@ off_t lseek(int fd, off_t pos, int whence , int *error)
 			VOP_STAT(fh->vn,&st);
 			position_new = st.st_size + pos;
 			break;
+		}
+
+		if(position_new < 0){
+			*error = EINVAL;
+			return -1;
 		}
 
 		lock_acquire(fh->mutex);
