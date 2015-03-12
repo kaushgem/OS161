@@ -48,6 +48,7 @@
 #include <process_syscalls.h>
 #include <copyinout.h>
 
+
 /*
  * Load program "progname" and start running it in usermode.
  * Does not return except on error.
@@ -55,28 +56,27 @@
  * Calls vfs_open on progname and thus may destroy it.
  */
 int
-runprogram(char *progname, char *argv[], int argc)
+runprogram(char *progname, char **argv, int argc)
 {
 	struct vnode *v;
 	vaddr_t entrypoint, stackptr;
 	int result;
 
-
 	// Copying arguments into Kernel space
 
-	char *kernel_buffer[argc];
-	size_t size[argc];
-	size_t size_with_padding[argc];
+	//char *kernel_buffer[argc];
+	//size_t size[argc];
+	//size_t size_with_padding[argc];/
 
-	if(argc > 0)
+	/*if(argc > 0)
 	{
 		for(int i=0 ; i < argc ; i++){
 			size[i] = strlen(argv[i])+1;
 			kernel_buffer[i] = kmalloc( sizeof(int32_t) * size[i] );
 			copyin((const_userptr_t) argv[i], (void*) kernel_buffer[i], size[i]);
-			size_with_padding[i] = size[i] + (4 - size[i]%4) /* padding */;
+			size_with_padding[i] = size[i] + (4 - size[i]%4) ;
 		}
-	}
+	}*/
 
 	/* Open the file. */
 	result = vfs_open(progname, O_RDONLY, 0, &v);
@@ -137,34 +137,49 @@ runprogram(char *progname, char *argv[], int argc)
 	kfree(name);
 	//
 
+	//kprintf("\n run program");
 
 
 	// Loading user stack from kernel buffer
 
 	int i;
-	vaddr_t kargv[argc];
+	vaddr_t kargv[argc+1];
 	size_t len_from_top = 0;
+	int arglen = 0;
 
 	if(argc > 0)
 	{
-		// Fill args
-		for(i=0 ; i < argc ; i++){
-			len_from_top = len_from_top + size_with_padding[i];
-			kargv[i] = (vaddr_t) stackptr - len_from_top;
-			copyout(kernel_buffer[i], (void*) kargv[i], size_with_padding[i]*sizeof(int32_t));
-		}
 
 		// Fill end point (NULL)
-		stackptr = stackptr - len_from_top - sizeof(int32_t);
-		char *end = NULL;
-		copyout((const void*) end, (userptr_t) stackptr, sizeof(int32_t));
+		kargv[argc]=0;
 
-		// Fill args address
+		// Fill args
 		for(i=0 ; i < argc ; i++){
-			stackptr = stackptr - sizeof(int32_t);
-			copyout((void*) kargv[i], (userptr_t) stackptr, sizeof(int32_t));
+			arglen = strlen(argv[i])+1 + (4- ((strlen(argv[i])+1)%4));
+			len_from_top = len_from_top + arglen ;
+			kargv[i] =  stackptr - len_from_top;
+			//kprintf("\n %s : %d : %d : %u ", argv[i], arglen, len_from_top,stackptr);
+			//kprintf("\n %u",stackptr);
+			copyout(argv[i], (userptr_t) kargv[i], arglen);
 		}
 
+
+		stackptr = stackptr - (len_from_top + sizeof(vaddr_t)* (argc+1));
+
+		//kprintf("\n  %d :",stackptr);
+		// Fill args address
+		for(i=0 ; i < argc+1 ; i++){
+
+			//kprintf("\n  %d :",stackptr);
+			copyout( &kargv[i], (userptr_t) stackptr, sizeof(vaddr_t));
+			stackptr = stackptr + sizeof(vaddr_t);
+		}
+
+		// reset the stackpointer to bottom
+		stackptr = stackptr -sizeof(vaddr_t)* (argc+1);
+
+		//kprintf("\n  %d :",stackptr);
+		//kprintf("\n entering usermode\n");
 		/* Warp to user mode. */
 		enter_new_process( argc /*argc*/, (userptr_t) stackptr /*userspace addr of argv*/,
 				stackptr, entrypoint);
