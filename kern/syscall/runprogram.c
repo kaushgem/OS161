@@ -62,21 +62,6 @@ runprogram(char *progname, char **argv, int argc)
 	vaddr_t entrypoint, stackptr;
 	int result;
 
-	// Copying arguments into Kernel space
-
-	//char *kernel_buffer[argc];
-	//size_t size[argc];
-	//size_t size_with_padding[argc];/
-
-	/*if(argc > 0)
-	{
-		for(int i=0 ; i < argc ; i++){
-			size[i] = strlen(argv[i])+1;
-			kernel_buffer[i] = kmalloc( sizeof(int32_t) * size[i] );
-			copyin((const_userptr_t) argv[i], (void*) kernel_buffer[i], size[i]);
-			size_with_padding[i] = size[i] + (4 - size[i]%4) ;
-		}
-	}*/
 
 	/* Open the file. */
 	result = vfs_open(progname, O_RDONLY, 0, &v);
@@ -137,10 +122,6 @@ runprogram(char *progname, char **argv, int argc)
 	kfree(name);
 	//
 
-	//kprintf("\n run program");
-
-
-	// Loading user stack from kernel buffer
 
 	int i;
 	vaddr_t kargv[argc+1];
@@ -150,36 +131,21 @@ runprogram(char *progname, char **argv, int argc)
 	if(argc > 0)
 	{
 
-		// Fill end point (NULL)
 		kargv[argc]=0;
-
 		// Fill args
 		for(i=0 ; i < argc ; i++){
 			arglen = strlen(argv[i])+1 + (4- ((strlen(argv[i])+1)%4));
 			len_from_top = len_from_top + arglen ;
 			kargv[i] =  stackptr - len_from_top;
-			//kprintf("\n %s : %d : %d : %u ", argv[i], arglen, len_from_top,stackptr);
-			//kprintf("\n %u",stackptr);
 			copyout(argv[i], (userptr_t) kargv[i], arglen);
 		}
+		stackptr = stackptr - len_from_top ;
 
+		for(i=argc ; i >=0 ; i--){
 
-		stackptr = stackptr - (len_from_top + sizeof(vaddr_t)* (argc+1));
-
-		//kprintf("\n  %d :",stackptr);
-		// Fill args address
-		for(i=0 ; i < argc+1 ; i++){
-
-			//kprintf("\n  %d :",stackptr);
 			copyout( &kargv[i], (userptr_t) stackptr, sizeof(vaddr_t));
-			stackptr = stackptr + sizeof(vaddr_t);
+			stackptr = stackptr - sizeof(vaddr_t);
 		}
-
-		// reset the stackpointer to bottom
-		stackptr = stackptr -sizeof(vaddr_t)* (argc+1);
-
-		//kprintf("\n  %d :",stackptr);
-		//kprintf("\n entering usermode\n");
 		/* Warp to user mode. */
 		enter_new_process( argc /*argc*/, (userptr_t) stackptr /*userspace addr of argv*/,
 				stackptr, entrypoint);
