@@ -139,6 +139,9 @@ common_prog(int nargs, char **args)
 #endif
 
 	struct thread *t1;
+
+
+
 	if(pid_array_lock == NULL)
 		pid_array_lock = lock_create("global");
 

@@ -495,7 +495,33 @@ thread_fork(const char *name,
 {
 	struct thread *newthread;
 
+
+	// *************************
+	// allocate process id
+	lock_acquire(pid_array_lock);
+	pid_t cpid = allocate_processid(); // remember to handle fork bomb
+	if(cpid<0){
+		return ENOMEM;
+	}
+
+	//kprintf("assignig pid to new thread: %d",(int) newthread->pid);
+	struct process_block  *cpb = init_process_block(getpid());
+	if(cpb==NULL){
+		return ENOMEM;
+	}
+	//add_child(pid_array[getpid()]->child,cpid);
+
+	int t = splhigh();
+	//kprintf("\n  current process: %d child process: %d \n", (int)getpid(), (int) cpid);
+	splx(t);
+	pid_array[getpid()]->childpid[cpid]=true;
+	pid_array[cpid] = cpb;
+	lock_release(pid_array_lock);
+
+
+
 	newthread = thread_create(name);
+	newthread->pid = cpid;
 	if (newthread == NULL) {
 		return ENOMEM;
 	}
@@ -543,27 +569,7 @@ thread_fork(const char *name,
 		}
 	}
 
-	// *************************
-	// allocate process id
-	lock_acquire(pid_array_lock);
-	pid_t cpid = allocate_processid(); // remember to handle fork bomb
-	if(cpid<0){
-		return ENOMEM;
-	}
-	newthread->pid = cpid;
-	//kprintf("assignig pid to new thread: %d",(int) newthread->pid);
-	struct process_block  *cpb = init_process_block(getpid());
-	if(cpb==NULL){
-		return ENOMEM;
-	}
-	//add_child(pid_array[getpid()]->child,cpid);
 
-	int t = splhigh();
-	kprintf("\n  current process: %d child process: %d \n", (int)getpid(), (int) cpid);
-	splx(t);
-	pid_array[getpid()]->childpid[cpid]=true;
-	pid_array[cpid] = cpb;
-	lock_release(pid_array_lock);
 
 	// *************************
 
@@ -883,7 +889,7 @@ thread_exit(void)
 	//cv_broadcast(currentProcess->process_cv,currentProcess->process_cv_lock);
 
 	int t = splhigh();
-	kprintf("exiting: %d",(int)getpid());
+	//kprintf("\nexiting: %d",(int)getpid());
 	splx(t);
 	if(currentProcess!=NULL)
 	{

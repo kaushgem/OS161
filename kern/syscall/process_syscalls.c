@@ -283,7 +283,7 @@ pid_t waitpid(pid_t pid, int *status, int options, int *error)
 	}
 
 	int t= splhigh();
-	kprintf("\n curpid:%d waiting for the child pid %d to exit", (int)getpid(),(int)pid);
+	//kprintf("\n curpid:%d waiting for the child pid %d to exit", (int)getpid(),(int)pid);
 	splx(t);
 	if(!childProcess->exited){
 		//kprintf("\nwaitpid: cv waiting");
@@ -295,8 +295,8 @@ pid_t waitpid(pid_t pid, int *status, int options, int *error)
 		return pid;
 	}
 
-	int t= splhigh();
-	kprintf("\ncurpid:%d  child pid %d exited\n",(int)getpid(),(int)pid);
+	t= splhigh();
+	//skprintf("\ncurpid:%d  child pid %d exited\n",(int)getpid(),(int)pid);
 	splx(t);
 	*status = childProcess->exitcode;
 
