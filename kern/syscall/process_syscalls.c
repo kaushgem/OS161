@@ -282,7 +282,9 @@ pid_t waitpid(pid_t pid, int *status, int options, int *error)
 		return -1;
 	}
 
-	// kprintf("\nwaitpid: waiting for the child pid %d to exit",(int)pid);
+	int t= splhigh();
+	kprintf("\n curpid:%d waiting for the child pid %d to exit", (int)getpid(),(int)pid);
+	splx(t);
 	if(!childProcess->exited){
 		//kprintf("\nwaitpid: cv waiting");
 		P(childProcess->process_sem);
@@ -294,7 +296,7 @@ pid_t waitpid(pid_t pid, int *status, int options, int *error)
 	}
 
 	int t= splhigh();
-	//kprintf("\nwaitpid:  child pid %d exited\n",(int)pid);
+	kprintf("\ncurpid:%d  child pid %d exited\n",(int)getpid(),(int)pid);
 	splx(t);
 	*status = childProcess->exitcode;
 
@@ -328,15 +330,16 @@ void _exit(int exitcode){
 	}
 }
 
-//
-//int execv(const char *program, char **args)
+//int
+//execv(char *progname, char **argv)
 //{
 //	struct vnode *v;
 //	vaddr_t entrypoint, stackptr;
-//	int result;
+//	int result,argc=0;
+//
 //
 //	/* Open the file. */
-//	result = vfs_open(program, O_RDONLY, 0, &v);
+//	result = vfs_open(progname, O_RDONLY, 0, &v);
 //	if (result) {
 //		return result;
 //	}
@@ -350,6 +353,7 @@ void _exit(int exitcode){
 //		vfs_close(v);
 //		return ENOMEM;
 //	}
+//
 //
 //	/* Activate it. */
 //	as_activate(curthread->t_addrspace);
@@ -372,32 +376,33 @@ void _exit(int exitcode){
 //		return result;
 //	}
 //
+//	int i;
+//	vaddr_t kargv[argc+1];
+//	size_t len_from_top = 0;
+//	int arglen = 0, arglen_pad=0;
 //
-//	char ptr[16];
+//	if(argc > 0)
+//	{
 //
-//	((userptr_t*)ptr)[0] = (userptr_t)0x7FFFFFF8; //stackptr - 16 + 8
-//	((userptr_t*)ptr)[1] = NULL;
-//	ptr[8] = 't';
-//	ptr[9] = 'e';
-//	ptr[10] = 's';
-//	ptr[11] = 't';
-//	ptr[12] = 's';
-//	ptr[13] = '\0';
-//	ptr[14] = '\0';
-//	ptr[15] = '\0';
+//		kargv[argc]=0;
+//		for(i=0 ; i < argc ; i++){
+//			arglen = strlen(argv[i])+1;
+//			arglen_pad =arglen	+ (4- ((arglen)%4));
+//			len_from_top = len_from_top + arglen_pad ;
+//			kargv[i] =  stackptr - len_from_top;
+//			copyout(argv[i], (userptr_t) kargv[i], arglen_pad);
+//		}
+//		stackptr = stackptr - len_from_top -(argc+1)*sizeof(vaddr_t);
+//		for(i=0 ; i <argc+1 ; i++){
+//			copyout( &kargv[i], (userptr_t) stackptr, sizeof(vaddr_t));
+//			stackptr = stackptr + sizeof(vaddr_t);
+//		}
 //
-//	copyout(ptr, (userptr_t)(stackptr - 16), 16);
-//
-//	enter_new_process(
-//			1, (userptr_t)(stackptr - 16),
-//			stackptr - 16, entrypoint
-//	);
-//
-//
-//	/* Warp to user mode. */
-//	enter_new_process(0 /*argc*/, NULL /*userspace addr of argv*/,
-//			stackptr, entrypoint);
-//
+//		stackptr = stackptr -(argc+1)*sizeof(vaddr_t);
+//		/* Warp to user mode. */
+//		enter_new_process( argc /*argc*/, (userptr_t) stackptr /*userspace addr of argv*/,
+//				stackptr, entrypoint);
+//	}
 //	/* enter_new_process does not return. */
 //	panic("enter_new_process returned\n");
 //	return EINVAL;

@@ -559,7 +559,7 @@ thread_fork(const char *name,
 	//add_child(pid_array[getpid()]->child,cpid);
 
 	int t = splhigh();
-	//kprintf("\n  current process: %d child process: %d \n", (int)getpid(), (int) cpid);
+	kprintf("\n  current process: %d child process: %d \n", (int)getpid(), (int) cpid);
 	splx(t);
 	pid_array[getpid()]->childpid[cpid]=true;
 	pid_array[cpid] = cpb;
@@ -570,8 +570,9 @@ thread_fork(const char *name,
 	/* Lock the current cpu's run queue and make the new thread runnable */
 	//splraise(0,1);
 	//kprintf("\n--> %d / %d \n",(int)getpid(),(int)cpid);
-	thread_make_runnable(newthread, false);
 	//spllower(1,0);
+	thread_make_runnable(newthread, false);
+
 	/*
 	 * Return new thread structure if it's wanted. Note that using
 	 * the thread structure from the parent thread should be done
@@ -882,7 +883,7 @@ thread_exit(void)
 	//cv_broadcast(currentProcess->process_cv,currentProcess->process_cv_lock);
 
 	int t = splhigh();
-	//kprintf("exiting: %d",(int)getpid());
+	kprintf("exiting: %d",(int)getpid());
 	splx(t);
 	if(currentProcess!=NULL)
 	{
