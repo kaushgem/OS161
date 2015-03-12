@@ -545,7 +545,6 @@ thread_fork(const char *name,
 		newthread->t_fdtable[i] = curthread->t_fdtable[i];
 		if(newthread->t_fdtable[i]!=NULL){
 			newthread->t_fdtable[i]->ref_count++;
-
 		}
 	}
 
@@ -556,15 +555,12 @@ thread_fork(const char *name,
 	newthread->pid = cpid;
 	//kprintf("assignig pid to new thread: %d",(int) newthread->pid);
 	struct process_block  *cpb = init_process_block(getpid());
-	// assign it to global static array
-	//lock_acquire(pid_array_lock);
 	//add_child(pid_array[getpid()]->child,cpid);
 	//kprintf("\n  current process: %d child process: %d", (int)getpid(), (int) cpid);
 
 	pid_array[getpid()]->childpid[cpid]=true;
 	pid_array[cpid] = cpb;
 	lock_release(pid_array_lock);
-	//lock_release(pid_array_lock);
 
 	// *************************
 

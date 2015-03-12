@@ -91,10 +91,10 @@ int open(const char *filename, int flags, int mode, int *error) {
 		return -1;
 	}
 
-	char kfilename[256];
+	char kfilename[__NAME_MAX];
 	size_t actual;
 
-	*error = copyinstr((const_userptr_t) filename, kfilename, 256, &actual);
+	*error = copyinstr((const_userptr_t) filename, kfilename, __NAME_MAX, &actual);
 	if(*error != 0){
 		return -1;
 	}
@@ -141,6 +141,14 @@ int read(int fd, void *buf, size_t size, int* error) {
 		lock_acquire(fh->mutex);
 		struct iovec iovec_obj;
 		struct uio uio_obj;
+
+		//		void *k_buf = kmalloc(sizeof(*buf));
+		//
+		//		*error = copyin((const_userptr_t) buf, k_buf, sizeof(*buf));
+		//		if(*error != 0){
+		//			return -1;
+		//		}
+
 		uio_init(&iovec_obj, &uio_obj, (void *) buf, size, fh->offset, UIO_READ);
 		*error = VOP_READ(fh->vn, &uio_obj);
 		if(*error != 0){
@@ -188,8 +196,8 @@ int write(int fd, const void *buf, size_t size, int* error) {
 int dup2(int oldfd, int newfd){
 
 	if(	curthread->t_fdtable[oldfd] == NULL ||
-		curthread->t_fdtable[newfd] != NULL ||
-		newfd > __OPEN_MAX 	)
+			curthread->t_fdtable[newfd] != NULL ||
+			newfd > __OPEN_MAX 	)
 	{
 		return EBADF;
 	}
@@ -266,6 +274,12 @@ int chdir(const char *pathname)
 	if(pathname == NULL)
 	{
 		return EFAULT;
+	}
+	char k_pathname[__PATH_MAX];
+	size_t actual;
+	int err = copyinstr((const_userptr_t) pathname, k_pathname, __PATH_MAX, &actual);
+	if(err != 0){
+		return -1;
 	}
 	return vfs_chdir((char*)pathname);
 }

@@ -123,9 +123,10 @@ pid_t fork(struct trapframe *ptf, int *error)
 	struct trapframe *ctf = NULL;
 	ctf = kmalloc(sizeof(struct trapframe));
 	if(ctf == NULL){
+		*error = ENOMEM;
 		return -1;
 	}
-	memcpy(ctf,ptf, sizeof(struct trapframe));
+	memcpy(ctf, ptf, sizeof(struct trapframe));
 
 	struct addrspace *caddr = NULL;
 	*error = as_copy(curthread->t_addrspace, &caddr);
@@ -142,6 +143,10 @@ pid_t fork(struct trapframe *ptf, int *error)
 			(unsigned long)caddr,
 			&child_thread);
 
+	if(child_thread == NULL){
+		*error = ENOMEM;
+		return -1;
+	}
 	if(*error > 0){
 		return -1;
 	}
