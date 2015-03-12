@@ -557,8 +557,10 @@ thread_fork(const char *name,
 		return ENOMEM;
 	}
 	//add_child(pid_array[getpid()]->child,cpid);
-	//kprintf("\n  current process: %d child process: %d", (int)getpid(), (int) cpid);
 
+	int t = splhigh();
+	//kprintf("\n  current process: %d child process: %d \n", (int)getpid(), (int) cpid);
+	splx(t);
 	pid_array[getpid()]->childpid[cpid]=true;
 	pid_array[cpid] = cpb;
 	lock_release(pid_array_lock);
@@ -842,6 +844,9 @@ thread_exit(void)
 
 	cur = curthread;
 
+
+
+
 	if (cur->t_fdtable){
 		for(int i=0; i<__OPEN_MAX; i++){
 			if(curthread->t_fdtable[i] == NULL){
@@ -849,6 +854,8 @@ thread_exit(void)
 			}
 		}
 	}
+
+
 
 	/* VFS fields */
 	if (cur->t_cwd) {
@@ -870,13 +877,18 @@ thread_exit(void)
 		as_destroy(as);
 	}
 
+
 	struct process_block *currentProcess = pid_array[getpid()];
 	//cv_broadcast(currentProcess->process_cv,currentProcess->process_cv_lock);
 
+	int t = splhigh();
+	//kprintf("exiting: %d",(int)getpid());
+	splx(t);
 	if(currentProcess!=NULL)
 	{
 		V(currentProcess->process_sem);
 	}
+
 	/* Check the stack guard band. */
 	thread_checkstack(cur);
 

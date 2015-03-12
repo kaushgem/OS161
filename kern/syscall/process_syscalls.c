@@ -18,6 +18,7 @@
 #include <test.h>
 #include <kern/wait.h>
 #include<copyinout.h>
+#include <spl.h>
 
 pid_t allocate_processid()
 {
@@ -239,7 +240,10 @@ pid_t waitpid(pid_t pid, int *status, int options, int *error)
 		return -1;
 	}
 
-	//kprintf("\nwaitpid: validating  options");
+	int spl = splhigh();
+	//kprintf("\nwaitpid: waiting for %d to exit",(int)pid);
+	splx(spl);
+
 	if(options != 0){
 		*error = EINVAL;
 		//kprintf("\ninvalid options");
@@ -286,9 +290,12 @@ pid_t waitpid(pid_t pid, int *status, int options, int *error)
 	else
 	{
 		//kprintf("\n child process alread exited");
+		return pid;
 	}
 
+	int t= splhigh();
 	//kprintf("\nwaitpid:  child pid %d exited\n",(int)pid);
+	splx(t);
 	*status = childProcess->exitcode;
 
 	//remove_child(currentProcess->child, pid);
@@ -317,7 +324,7 @@ void _exit(int exitcode){
 	}
 	else
 	{
-		kprintf("curremt process is null. something wrong\n");
+		kprintf("current process %d is null. something wrong\n",(int)getpid());
 	}
 }
 
