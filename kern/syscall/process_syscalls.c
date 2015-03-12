@@ -33,6 +33,8 @@ struct process_block *init_process_block(pid_t parentpid)
 {
 	struct process_block *pb;
 	pb = (struct process_block*) kmalloc(sizeof(struct process_block));
+	if(pb==NULL)
+		return NULL;
 	pb->parent_pid = parentpid;
 	pb->process_sem = sem_create("proc_sem",0);
 	pb->exited = false;

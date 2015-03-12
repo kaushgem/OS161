@@ -552,9 +552,15 @@ thread_fork(const char *name,
 	// allocate process id
 	lock_acquire(pid_array_lock);
 	pid_t cpid = allocate_processid(); // remember to handle fork bomb
+	if(cpid<0){
+		return ENOMEM;
+	}
 	newthread->pid = cpid;
 	//kprintf("assignig pid to new thread: %d",(int) newthread->pid);
 	struct process_block  *cpb = init_process_block(getpid());
+	if(cpb==NULL){
+		return ENOMEM;
+	}
 	//add_child(pid_array[getpid()]->child,cpid);
 	//kprintf("\n  current process: %d child process: %d", (int)getpid(), (int) cpid);
 
