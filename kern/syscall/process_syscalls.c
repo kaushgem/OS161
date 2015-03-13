@@ -172,26 +172,24 @@ pid_t getpid()
 	return curthread->pid;
 }
 
-pid_t waitpid(pid_t pid, vaddr_t status_vaddr, int options, int *error)
+pid_t waitpid(pid_t pid, int* status, int options, int *error)
 {
 	if(pid < 1 || pid > __PID_MAX ){
 		*error = EINVAL;
-		//kprintf("\ninvalid pid");
 		return -1;
 	}
-	int *status = (int *)status_vaddr;
 
 	if(status == NULL){
 		*error = EFAULT;
 		return -1;
 	}
 
-	if(status_vaddr == 0x40000000 || status_vaddr == 0x80000000){
+	if(status == (int*) 0x40000000 || status == (int*) 0x80000000){
 		*error = EFAULT;
 		return -1;
 	}
 
-	int statusint = (int)status_vaddr;
+	int statusint = (int)status;
 	if(statusint %4 !=0){
 		*error = EFAULT;
 		return -1;
@@ -199,10 +197,14 @@ pid_t waitpid(pid_t pid, vaddr_t status_vaddr, int options, int *error)
 
 	if(options != 0){
 		*error = EINVAL;
-		//kprintf("\ninvalid options");
 		return -1;
 	}
 
+	if(pid == getpid()){
+		*error = ECHILD;
+	}
+
+	//if(pid = curthread->pid)
 	//kprintf("\nwaitpid: current process pid:  %d",getpid());
 	struct process_block *currentProcess = pid_array[getpid()];
 	struct process_block *childProcess = pid_array[pid];
@@ -261,19 +263,15 @@ pid_t waitpid(pid_t pid, vaddr_t status_vaddr, int options, int *error)
 }
 
 void _exit(int exitcode){
-
 	//kprintf("process %d exiting\n" , (int)getpid() );
 
 	struct process_block *currentProcess = pid_array[getpid()];
-
-	if(currentProcess !=NULL)
-	{
+	if(currentProcess !=NULL){
 		currentProcess->exited = true;
 		currentProcess->exitcode = _MKWAIT_EXIT(exitcode);
 		thread_exit();
 	}
-	else
-	{
+	else{
 		kprintf("current process %d is null. something wrong\n",(int)getpid());
 	}
 }
@@ -281,10 +279,9 @@ void _exit(int exitcode){
 int
 execv(const char *prog_name, char **argv)
 {
-	int argc = 0;
-
 	if(	   prog_name == NULL || argv == NULL  ) return EFAULT;
 
+	int argc = 0;
 	size_t actual;
 	char progname[__NAME_MAX];
 	int err = copyinstr((const_userptr_t) prog_name, progname, __NAME_MAX, &actual);
@@ -292,11 +289,8 @@ execv(const char *prog_name, char **argv)
 		return EFAULT;
 	}
 
-
-
 	if (	progname == (const char *)0x40000000 || progname == (const char *)0x80000000 ||
 			argv == (char **)0x40000000 || argv == (char **)0x80000000)		return EFAULT;
-
 	if(    strcmp(progname,"")    ) return EFAULT;
 	if(    strcmp((const char*)*argv,"")    ) return EINVAL;
 	if(    strcmp(progname,"\0")   ) return EINVAL;
@@ -354,7 +348,7 @@ execv(const char *prog_name, char **argv)
 		return result;
 	}
 
-
+	// Load the arguments in user stack
 	vaddr_t kargv[argc+1];
 	size_t len_from_top = 0;
 	int arglen = 0, arglen_pad=0;
