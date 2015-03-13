@@ -231,13 +231,14 @@ pid_t getpid()
 	return curthread->pid;
 }
 
-pid_t waitpid(pid_t pid, int *status, int options, int *error)
+pid_t waitpid(pid_t pid, vaddr_t status_vaddr, int options, int *error)
 {
 	if(pid < 1 || pid > __PID_MAX ){
 		*error = EINVAL;
 		//kprintf("\ninvalid pid");
 		return -1;
 	}
+	int *status = (int *)status_vaddr;
 
 	if(status == NULL)
 	{
@@ -245,34 +246,27 @@ pid_t waitpid(pid_t pid, int *status, int options, int *error)
 		return -1;
 	}
 
-	if(status == (int *)0x40000000 || status == (int *)0x80000000){
+
+
+	if(status_vaddr == 0x40000000 || status_vaddr == 0x80000000){
 		*error = EFAULT;
 		return -1;
 	}
 
-	//int spl = splhigh();
-	//kprintf("\nwaitpid: waiting for %d to exit",(int)pid);
-	//splx(spl);
-
-	char *align = (char*)status;
-	int counter = 0;
-	while(align[counter]!=0)
+	int statusint = (int)status_vaddr;
+	if(statusint %4 !=0)
 	{
-		align++;
-		counter++;
-	}
-
-	if(counter%4!=0 || sizeof(align)%4!=0)
-	{
-		return EFAULT;
+		*error = EFAULT;
 		return -1;
 	}
+
 
 	if(options != 0){
 		*error = EINVAL;
 		//kprintf("\ninvalid options");
 		return -1;
 	}
+
 
 	//kprintf("\nwaitpid: current process pid:  %d",getpid());
 	struct process_block *currentProcess = pid_array[getpid()];
@@ -361,21 +355,21 @@ execv(const char *progname, char **argv)
 
 	// Error check
 
-//	int err;
-//	size_t actual;
-//	char progname[__NAME_MAX];
-//	err = copyinstr((const_userptr_t) prog_name, progname, __NAME_MAX, &actual);
-//	if(err != 0){
-//		return EFAULT;
-//	}
-//
-//	char* argv[__ARG_MAX];
-//	err = copyinstr((const_userptr_t) arg_v, (char*) argv, __ARG_MAX, &actual);
-//	if(err != 0){
-//		return EFAULT;
-//	}
+	//	int err;
+	//	size_t actual;
+	//	char progname[__NAME_MAX];
+	//	err = copyinstr((const_userptr_t) prog_name, progname, __NAME_MAX, &actual);
+	//	if(err != 0){
+	//		return EFAULT;
+	//	}
+	//
+	//	char* argv[__ARG_MAX];
+	//	err = copyinstr((const_userptr_t) arg_v, (char*) argv, __ARG_MAX, &actual);
+	//	if(err != 0){
+	//		return EFAULT;
+	//	}
 
-//
+	//
 
 	if(	   progname == NULL || argv == NULL  ) return EFAULT;
 

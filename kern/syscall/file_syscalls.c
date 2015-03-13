@@ -266,7 +266,7 @@ int dup2(int oldfd, int newfd , int *error){
 		curthread->t_fdtable[newfd]->ref_count++;
 		lock_release(curthread->t_fdtable[newfd]->mutex);
 	}
-	return oldfd;
+	return newfd;
 }
 
 

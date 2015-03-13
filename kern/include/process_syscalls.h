@@ -46,7 +46,7 @@ struct trapframe *copy_parent_trapframe(struct  trapframe *ptf);
 void child_fork_entry(void *data1, unsigned long data2);
 
 pid_t getpid(void);
-pid_t waitpid(pid_t pid, int *status, int options, int *error);
+pid_t waitpid(pid_t pid, vaddr_t status, int options, int *error);
 void _exit(int exitcode);
 pid_t fork(struct  trapframe* , int *error);
 int execv(const char *program, char **args);
