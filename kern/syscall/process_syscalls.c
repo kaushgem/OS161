@@ -244,10 +244,6 @@ pid_t waitpid(pid_t pid, int* status, int options, int *error)
 		//kprintf("\nwaitpid: cv waiting");
 		P(childProcess->process_sem);
 	}
-	else{
-		//kprintf("\n child process alread exited");
-		return pid;
-	}
 
 	//t= splhigh();
 	//skprintf("\ncurpid:%d  child pid %d exited\n",(int)getpid(),(int)pid);
