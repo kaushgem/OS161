@@ -393,7 +393,8 @@ thread_bootstrap(void)
 	curcpu->c_curthread = curthread;
 
 	/* Done */
-	spinlock_init(&pid_array_spinlock);
+	//spinlock_init(&pid_array_spinlock);
+	pid_array_lock =lock_create("pid_array_lock");
 }
 
 /*
@@ -555,17 +556,20 @@ thread_fork(const char *name,
 	if(cpb == NULL){
 		return ENOMEM;
 	}
-	spinlock_acquire(&pid_array_spinlock);
+	//spinlock_acquire(&pid_array_spinlock);
+	lock_acquire(pid_array_lock);
 	pid_t cpid = allocate_processid(); // remember to handle fork bomb
 	if(cpid<0){
-		spinlock_release(&pid_array_spinlock);
+		//spinlock_release(&pid_array_spinlock);
+		lock_release(pid_array_lock);
 		return ENOMEM;
 	}
 
 	newthread->pid = cpid;
 	pid_array[getpid()]->childpid[cpid]=true;
 	pid_array[cpid] = cpb;
-	spinlock_release(&pid_array_spinlock);
+	//spinlock_release(&pid_array_spinlock);
+	lock_release(pid_array_lock);
 
 	// *************************
 
@@ -847,9 +851,6 @@ thread_exit(void)
 
 	cur = curthread;
 
-
-
-
 	if (cur->t_fdtable){
 		for(int i=0; i<__OPEN_MAX; i++){
 			if(curthread->t_fdtable[i] == NULL){
@@ -857,8 +858,6 @@ thread_exit(void)
 			}
 		}
 	}
-
-
 
 	/* VFS fields */
 	if (cur->t_cwd) {
@@ -894,6 +893,7 @@ thread_exit(void)
 
 	/* Check the stack guard band. */
 	thread_checkstack(cur);
+	//thread_destroy(cur);
 
 	/* Interrupts off on this processor */
 	splhigh();
