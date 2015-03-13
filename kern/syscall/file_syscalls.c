@@ -166,9 +166,14 @@ int read(int fd, void *buf, size_t size, int* error) {
 
 
 
-		char kfilename[__NAME_MAX];
-		size_t actual;
-		*error = copyinstr((const_userptr_t) buf, kfilename, __NAME_MAX, &actual);
+		//char kfilename[__NAME_MAX];
+		//size_t actual;
+		//*error = copyinstr((const_userptr_t) buf, kfilename, __NAME_MAX, &actual);
+
+
+		void* buffer = kmalloc(sizeof(*buf));
+		*error = copyin((const_userptr_t) buf, buffer, sizeof(*buf));
+
 		if(*error != 0){
 			return -1;
 		}
@@ -212,9 +217,12 @@ int write(int fd, const void *buf, size_t size, int* error) {
 			return -1;
 		}
 
-		char kfilename[__NAME_MAX];
-		size_t actual;
-		*error = copyinstr((const_userptr_t) buf, kfilename, __NAME_MAX, &actual);
+		//		char kfilename[__NAME_MAX];
+		//		size_t actual;
+		//		*error = copyinstr((const_userptr_t) buf, kfilename, __NAME_MAX, &actual);
+
+		void* buffer = kmalloc(sizeof(*buf));
+		*error = copyin((const_userptr_t) buf, buffer, sizeof(*buf));
 		if(*error != 0){
 			return -1;
 		}
