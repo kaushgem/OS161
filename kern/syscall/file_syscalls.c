@@ -313,20 +313,13 @@ int chdir(const char *pathname)
 	if(err != 0){
 		return err;
 	}
-	return vfs_chdir((char*)pathname);
+	return vfs_chdir((char*)k_pathname);
 }
 
 int __getcwd(char *buf, size_t buflen, int *error)
 {
 	if(buf==NULL){
 		*error = EFAULT ;
-		return -1;
-	}
-
-	char k_pathname[__PATH_MAX];
-	size_t actual;
-	*error = copyinstr((const_userptr_t) buf, k_pathname, __PATH_MAX, &actual);
-	if(*error != 0){
 		return -1;
 	}
 
