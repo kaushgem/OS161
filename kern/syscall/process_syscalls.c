@@ -44,30 +44,20 @@ struct process_block *init_process_block(pid_t parentpid)
 	{
 		pb->childpid[i] = false;
 	}
-
 	pb->exitcode = 0;
 	return pb;
 }
 
 void destroy_process_block(struct process_block* process){
-
-	//lock_destroy(process->process_cv_lock);
-	//kprintf("\n destroy_process_block: lock destoryed");
-	//destroy_childlist(process->child);
-	//kprintf("\n destroy_process_block: childlist destoryed");
-
-	if(process!=NULL)
-	{
+	if(process!=NULL){
 		sem_destroy(process->process_sem);
 		kfree(process);
 	}
-
 }
 
 
 void destroy_childlist(struct child* childlist){
 	struct child* temp_next;
-
 	while(childlist){
 		temp_next = childlist->next;
 		kfree(childlist);
@@ -76,11 +66,7 @@ void destroy_childlist(struct child* childlist){
 }
 
 void add_child(struct child* childlist, pid_t child_pid){
-
-
 	//kprintf("\nadd_child:  adding child: %d",(int)child_pid);
-
-
 	//kprintf("\nadd_child:  creating child node");
 	struct  child *childnode;
 	childnode = (struct child*) kmalloc(sizeof(struct child));
@@ -174,51 +160,6 @@ void child_fork_entry(void *data1, unsigned long data2)
 	//KASSERT(SAME_STACK(cpustacks[curcpu->c_number]-1, (vaddr_t)tf_copy));
 }
 
-struct trapframe *copy_parent_trapframe(struct  trapframe *ptf)
-{
-	struct trapframe *ctf;
-	ctf = (struct trapframe*) kmalloc(sizeof(struct trapframe));
-	ctf->tf_vaddr = (uint32_t) ptf->tf_vaddr;		/* coprocessor 0 vaddr register */
-	ctf->tf_status = (uint32_t)  ptf->tf_status;	/* coprocessor 0 status register */
-	ctf->tf_cause = (uint32_t)  ptf->tf_cause;		/* coprocessor 0 cause register */
-	ctf->tf_lo = (uint32_t) ptf->tf_lo;
-	ctf->tf_hi = (uint32_t) ptf->tf_hi;
-	ctf->tf_ra = (uint32_t) ptf->tf_ra	;			/* Saved register 31 */
-	ctf->tf_at = (uint32_t) ptf->tf_at	;			/* Saved register 1 (AT) */
-	ctf->tf_v0 = (uint32_t) ptf->tf_v0	;			/* Saved register 2 (v0) */
-	ctf->tf_v1 = (uint32_t) ptf->tf_v1	;			/* etc. */
-	ctf->tf_a0 = (uint32_t) ptf->tf_a0;
-	ctf->tf_a1 = (uint32_t) ptf->tf_a1;
-	ctf->tf_a2 = (uint32_t) ptf->tf_a2;
-	ctf->tf_a3 = (uint32_t) ptf->tf_a3;
-	ctf->tf_t0 = (uint32_t) ptf->tf_t0;
-	ctf->tf_t1 = (uint32_t) ptf->tf_t1;
-	ctf->tf_t2 = (uint32_t) ptf->tf_t2;
-	ctf->tf_t3 = (uint32_t) ptf->tf_t3;
-	ctf->tf_t4 = (uint32_t) ptf->tf_t4;
-	ctf->tf_t5 = (uint32_t) ptf->tf_t5;
-	ctf->tf_t6 = (uint32_t) ptf->tf_t6;
-	ctf->tf_t7 = (uint32_t) ptf->tf_t7;
-	ctf->tf_s0 = (uint32_t) ptf->tf_s0;
-	ctf->tf_s1 = (uint32_t) ptf->tf_s1;
-	ctf->tf_s2 = (uint32_t) ptf->tf_s2;
-	ctf->tf_s3 = (uint32_t) ptf->tf_s3;
-	ctf->tf_s4 = (uint32_t) ptf->tf_s4;
-	ctf->tf_s5 = (uint32_t) ptf->tf_s5;
-	ctf->tf_s6 = (uint32_t) ptf->tf_s6;
-	ctf->tf_s7 = (uint32_t) ptf->tf_s7;
-	ctf->tf_t8 = (uint32_t) ptf->tf_t8;
-	ctf->tf_t9 = (uint32_t) ptf->tf_t9;
-	ctf->tf_k0 = (uint32_t) ptf->tf_k0;				/* dummy (see exception.S comments) */
-	ctf->tf_k1 = (uint32_t) ptf->tf_k1;				/* dummy */
-	ctf->tf_gp = (uint32_t) ptf->tf_gp;
-	ctf->tf_sp = (uint32_t) ptf->tf_sp;
-	ctf->tf_s8 = (uint32_t) ptf->tf_s8;
-	ctf->tf_epc = (uint32_t) ptf->tf_epc;
-
-	return ctf;
-}
-
 struct addrspace* copy_parent_addrspace(struct addrspace *padrs)
 {
 	struct addrspace *cadrs;
@@ -240,13 +181,10 @@ pid_t waitpid(pid_t pid, vaddr_t status_vaddr, int options, int *error)
 	}
 	int *status = (int *)status_vaddr;
 
-	if(status == NULL)
-	{
+	if(status == NULL){
 		*error = EFAULT;
 		return -1;
 	}
-
-
 
 	if(status_vaddr == 0x40000000 || status_vaddr == 0x80000000){
 		*error = EFAULT;
@@ -254,19 +192,16 @@ pid_t waitpid(pid_t pid, vaddr_t status_vaddr, int options, int *error)
 	}
 
 	int statusint = (int)status_vaddr;
-	if(statusint %4 !=0)
-	{
+	if(statusint %4 !=0){
 		*error = EFAULT;
 		return -1;
 	}
-
 
 	if(options != 0){
 		*error = EINVAL;
 		//kprintf("\ninvalid options");
 		return -1;
 	}
-
 
 	//kprintf("\nwaitpid: current process pid:  %d",getpid());
 	struct process_block *currentProcess = pid_array[getpid()];
@@ -300,30 +235,25 @@ pid_t waitpid(pid_t pid, vaddr_t status_vaddr, int options, int *error)
 		return -1;
 	}
 
-	int t= splhigh();
+	//int t= splhigh();
 	//kprintf("\n curpid:%d waiting for the child pid %d to exit", (int)getpid(),(int)pid);
-	splx(t);
+	//splx(t);
 	if(!childProcess->exited){
 		//kprintf("\nwaitpid: cv waiting");
 		P(childProcess->process_sem);
 	}
-	else
-	{
+	else{
 		//kprintf("\n child process alread exited");
 		return pid;
 	}
 
-	t= splhigh();
+	//t= splhigh();
 	//skprintf("\ncurpid:%d  child pid %d exited\n",(int)getpid(),(int)pid);
-	splx(t);
+	//splx(t);
 	*status = childProcess->exitcode;
-
 	//remove_child(currentProcess->child, pid);
-
 	//kprintf("\nwaitpid: cv waiting done. destroying child process");
 	currentProcess->childpid[pid] = false;
-
-	// uncomment it may cause memory leak
 	//kprintf("\n destroying process: %d",(int)pid);
 	destroy_process_block(childProcess);
 	pid_array[pid] = NULL;

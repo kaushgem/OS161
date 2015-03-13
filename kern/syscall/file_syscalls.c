@@ -72,20 +72,14 @@ int open(const char *filename, int flags, int mode, int *error) {
 	}
 
 	int rwmask = flags&O_ACCMODE;
-
 	if (rwmask != O_RDWR &&  rwmask != O_WRONLY && rwmask != O_RDONLY )
 	{
 		*error = EINVAL;
 		return -1;
 	}
 
-	/*if(filename == (char *)0x40000000 || filename == (char *)0x80000000){
-	 *error = EFAULT;
-		return -1;
-	}*/
 	char kfilename[__NAME_MAX];
 	size_t actual;
-
 	*error = copyinstr((const_userptr_t) filename, kfilename, __NAME_MAX, &actual);
 	if(*error != 0){
 		return -1;
@@ -104,9 +98,6 @@ int open(const char *filename, int flags, int mode, int *error) {
 		*error = EMFILE;
 		return -1;
 	}
-
-
-
 
 	if(strlen(filename)==0)
 	{
@@ -156,7 +147,6 @@ int read(int fd, void *buf, size_t size, int* error) {
 		*error = EFAULT;
 		return -1;
 	} else {
-
 		struct fhandle *fh = curthread->t_fdtable[fd];
 		if(fh==NULL)
 		{
@@ -164,23 +154,11 @@ int read(int fd, void *buf, size_t size, int* error) {
 			return -1;
 		}
 
-
-
-		//char kfilename[__NAME_MAX];
-		//size_t actual;
-		//*error = copyinstr((const_userptr_t) buf, kfilename, __NAME_MAX, &actual);
-
-
 		void* buffer = kmalloc(sizeof(*buf));
 		*error = copyin((const_userptr_t) buf, buffer, sizeof(*buf));
-
 		if(*error != 0){
 			return -1;
 		}
-
-
-
-
 		lock_acquire(fh->mutex);
 		struct iovec iovec_obj;
 		struct uio uio_obj;
@@ -208,27 +186,17 @@ int write(int fd, const void *buf, size_t size, int* error) {
 		*error = EFAULT;
 		return -1;
 	} else {
-
-
 		struct fhandle *fh = curthread->t_fdtable[fd];
 		if (fh == NULL )
 		{
 			*error = EBADF;
 			return -1;
 		}
-
-		//		char kfilename[__NAME_MAX];
-		//		size_t actual;
-		//		*error = copyinstr((const_userptr_t) buf, kfilename, __NAME_MAX, &actual);
-
 		void* buffer = kmalloc(sizeof(*buf));
 		*error = copyin((const_userptr_t) buf, buffer, sizeof(*buf));
 		if(*error != 0){
 			return -1;
 		}
-
-
-
 		lock_acquire(fh->mutex);
 		struct iovec iovec_obj;
 		struct uio uio_obj;
@@ -268,7 +236,6 @@ int dup2(int oldfd, int newfd , int *error){
 			if(*error >0)
 				return -1;
 		}
-
 		curthread->t_fdtable[newfd] = curthread->t_fdtable[oldfd];
 		lock_acquire(curthread->t_fdtable[newfd]->mutex);
 		curthread->t_fdtable[newfd]->ref_count++;
@@ -300,7 +267,6 @@ off_t lseek(int fd, off_t pos, int whence , int *error)
 		{
 			*error = EBADF;
 			return -1;
-
 		}
 		struct stat st;
 		int position_new = fh->offset;
@@ -367,13 +333,10 @@ int __getcwd(char *buf, size_t buflen, int *error)
 		return -1;
 	}
 
-
 	struct iovec iovec_obj;
 	struct uio uio_obj;
 	uio_init(&iovec_obj, &uio_obj, (void *) buf, buflen, 0, UIO_READ);
 	*error = vfs_getcwd(&uio_obj);
 	return buflen - uio_obj.uio_resid;
-
-
 }
 
