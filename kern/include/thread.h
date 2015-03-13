@@ -130,6 +130,8 @@ void thread_panic(void);
 /* Call during system shutdown to offline other CPUs. */
 void thread_shutdown(void);
 
+void destroy_zombies(void);
+
 /*
  * Make a new thread, which will start executing at "func". The "data"
  * arguments (one pointer, one number) are passed to the function. The

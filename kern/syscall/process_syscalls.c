@@ -267,7 +267,15 @@ pid_t waitpid(pid_t pid, int* status, int options, int *error)
 	//kprintf("\n destroying process: %d",(int)pid);
 	destroy_process_block(childProcess);
 	pid_array[pid] = NULL;
-	return pid;
+
+
+	lock_acquire(pid_array_lock);
+	destroy_zombies();
+	lock_release(pid_array_lock);
+
+
+
+		return pid;
 }
 
 void _exit(int exitcode){

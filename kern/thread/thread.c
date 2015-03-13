@@ -593,6 +593,21 @@ thread_fork(const char *name,
 }
 
 
+void  destroy_zombies(void)
+{
+
+
+	while(curcpu->c_zombies.tl_count > 0)
+	{
+		kprintf("\n          hhhhhhhhhhh  %d",curcpu->c_zombies.tl_count);
+		struct thread *tln = curcpu->c_zombies.tl_tail.tln_self;
+		threadlist_remove(&curcpu->c_zombies, curcpu->c_zombies.tl_tail.tln_self);
+		 thread_destroy(tln);
+	}
+
+
+
+}
 
 
 
