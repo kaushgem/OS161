@@ -204,10 +204,21 @@ pid_t waitpid(pid_t pid, int* status, int options, int *error)
 		*error = ECHILD;
 	}
 
+
+
 	//if(pid = curthread->pid)
 	//kprintf("\nwaitpid: current process pid:  %d",getpid());
 	struct process_block *currentProcess = pid_array[getpid()];
 	struct process_block *childProcess = pid_array[pid];
+
+
+	if(currentProcess->parent_pid == childProcess->parent_pid)
+	{
+		*error = ECHILD;
+		//kprintf("\ninvalid child process: %d", (int)pid);
+		return -1;
+	}
+
 
 	//kprintf("\nwaitpid: validating  childProcess");
 	if(childProcess == NULL){
