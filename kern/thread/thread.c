@@ -496,7 +496,6 @@ thread_fork(const char *name,
 {
 	struct thread *newthread;
 
-
 	// *************************
 	// allocate process id
 
@@ -552,12 +551,8 @@ thread_fork(const char *name,
 		}
 	}
 
-
-
-	//lock_acquire(pid_array_lock);
-
 	struct process_block  *cpb = init_process_block(getpid());
-	if(cpb==NULL){
+	if(cpb == NULL){
 		return ENOMEM;
 	}
 	spinlock_acquire(&pid_array_spinlock);
@@ -570,7 +565,6 @@ thread_fork(const char *name,
 	newthread->pid = cpid;
 	pid_array[getpid()]->childpid[cpid]=true;
 	pid_array[cpid] = cpb;
-	//lock_release(pid_array_lock);
 	spinlock_release(&pid_array_spinlock);
 
 	// *************************

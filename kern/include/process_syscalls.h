@@ -14,7 +14,6 @@
 #include <mips/trapframe.h>
 
 struct process_block* pid_array[__PID_MAX];
-struct lock* pid_array_lock;
 struct spinlock pid_array_spinlock;
 
 struct process_block
