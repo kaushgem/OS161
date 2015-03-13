@@ -165,14 +165,13 @@ common_prog(int nargs, char **args)
 	//add_child(pid_array[getpid()]->child,t1->pid);
 	//lock_release(pid_array_lock);
 
-	int error,status;
-	vaddr_t statusaddr = (vaddr_t)(&status);
+	int status=0, error=0;
 	//kprintf("pid %d\n", (int)t1->pid);
 	//kprintf("waiting for process to exit\n");
 
 	if(t1!=NULL)
 	{
-		int res = waitpid(t1->pid,statusaddr, 0, &error);
+		int res = waitpid(t1->pid, &status, 0, &error);
 		if(res ==-1)
 		{
 			kprintf("error in waiting for process %d to exit", (int) t1->pid);
