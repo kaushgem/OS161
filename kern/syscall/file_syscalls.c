@@ -80,9 +80,9 @@ int open(const char *filename, int flags, int mode, int *error) {
 	}
 
 	if(filename == (char *)0x40000000 || filename == (char *)0x80000000){
-			*error = EFAULT;
-			return -1;
-		}
+		*error = EFAULT;
+		return -1;
+	}
 
 	int i;
 	for (i = 3; i < __OPEN_MAX; i++) {
@@ -199,16 +199,26 @@ int write(int fd, const void *buf, size_t size, int* error) {
 }
 
 
-int dup2(int oldfd, int newfd){
+int dup2(int oldfd, int newfd , int *error){
 
-	if(	curthread->t_fdtable[oldfd] == NULL ||
-			curthread->t_fdtable[newfd] != NULL ||
+	if(	oldfd <0 ||
+			oldfd>__OPEN_MAX ||
+			newfd<0 ||
+			newfd >__OPEN_MAX ||
+
+			curthread->t_fdtable[oldfd] == NULL ||
+			curthread->t_fdtable[newfd] == NULL ||
 			newfd > __OPEN_MAX 	)
 	{
-		return EBADF;
+		*error = EBADF;
+		return -1;
 	}
 	else
 	{
+		*error = close(newfd);
+		if(*error >0)
+			return -1;
+
 		curthread->t_fdtable[newfd] = curthread->t_fdtable[oldfd];
 		lock_acquire(curthread->t_fdtable[newfd]->mutex);
 		curthread->t_fdtable[newfd]->ref_count++;
@@ -220,8 +230,8 @@ int dup2(int oldfd, int newfd){
 
 off_t lseek(int fd, off_t pos, int whence , int *error)
 {
-	struct fhandle *fh = curthread->t_fdtable[fd];
-	if (fh == NULL || fd < 0 || fd > __OPEN_MAX) {
+	struct fhandle *fh ;
+	if ( fd < 0 || fd >= 128) {
 		*error = EBADF;
 		return -1;
 	}
@@ -240,6 +250,12 @@ off_t lseek(int fd, off_t pos, int whence , int *error)
 	{
 		// valid lseek
 		fh = curthread->t_fdtable[fd];
+		if(fh==NULL)
+		{
+			*error = EBADF;
+			return -1;
+
+		}
 		struct stat st;
 		int position_new = fh->offset;
 

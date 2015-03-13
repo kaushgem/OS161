@@ -27,7 +27,7 @@ int read(int fd, void *buf, size_t size, int *error);
 int write(int fd, const void *buf, size_t size, int *error);
 int close(int fd);
 
-int dup2(int oldfd, int newfd);
+int dup2(int oldfd, int newfd, int *error);
 off_t lseek(int fd, off_t pos, int whence, int *error);
 
 int chdir(const char *pathname);

@@ -149,7 +149,7 @@ syscall(struct trapframe *tf)
 	    	tf->tf_v1 = (int32_t) (retval_offset & 0xFFFFFFFF);
 	    	break;
 	    case SYS_dup2:
-	    	err = dup2(tf->tf_a0, tf->tf_a1); // error
+	    	retval = dup2(tf->tf_a0, tf->tf_a1, error); // error
 	    	break;
 	    case SYS_chdir:
 	    	err = chdir((const char*)tf->tf_a0);
