@@ -23,6 +23,8 @@
 #include <file_syscalls.h>
 #include <kern/stat.h>
 
+#include <process_syscalls.h>
+
 
 struct fhandle* create_fhandle(const char* name) {
 
@@ -85,6 +87,13 @@ int open(const char *filename, int flags, int mode, int *error) {
 		return -1;
 	}
 
+	if(strlen(filename)==0)
+	{
+		*error = EINVAL;
+		return -1;
+	}
+
+	lock_acquire(pid_array_lock);
 	int i;
 	for (i = 3; i < __OPEN_MAX; i++) {
 		if (curthread->t_fdtable[i] == NULL ) {
@@ -96,22 +105,19 @@ int open(const char *filename, int flags, int mode, int *error) {
 	}
 	if (i == __OPEN_MAX) {
 		*error = EMFILE;
+		lock_release(pid_array_lock);
 		return -1;
 	}
 
-	if(strlen(filename)==0)
-	{
-		*error = EINVAL;
-		return -1;
-	}
-
-	lock_acquire(fh->mutex);
 	*error = vfs_open((char*) kfilename, flags, mode, &fh->vn);
-	lock_release(fh->mutex);
+
 	if(*error != 0){
+		delete_fhandle(fd);
+		lock_release(pid_array_lock);
 		return -1;
 	}
 
+	lock_release(pid_array_lock);
 	return fd;
 }
 
