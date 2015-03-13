@@ -79,8 +79,15 @@ int open(const char *filename, int flags, int mode, int *error) {
 		return -1;
 	}
 
-	if(filename == (char *)0x40000000 || filename == (char *)0x80000000){
-		*error = EFAULT;
+	/*if(filename == (char *)0x40000000 || filename == (char *)0x80000000){
+	 *error = EFAULT;
+		return -1;
+	}*/
+	char kfilename[__NAME_MAX];
+	size_t actual;
+
+	*error = copyinstr((const_userptr_t) filename, kfilename, __NAME_MAX, &actual);
+	if(*error != 0){
 		return -1;
 	}
 
@@ -98,11 +105,12 @@ int open(const char *filename, int flags, int mode, int *error) {
 		return -1;
 	}
 
-	char kfilename[__NAME_MAX];
-	size_t actual;
 
-	*error = copyinstr((const_userptr_t) filename, kfilename, __NAME_MAX, &actual);
-	if(*error != 0){
+
+
+	if(strlen(filename)==0)
+	{
+		*error = EINVAL;
 		return -1;
 	}
 
@@ -126,6 +134,7 @@ int close(int fd) {
 			return EBADF;
 		lock_acquire(fh->mutex);
 		fh->ref_count--;
+
 		if (fh->ref_count == 0) {
 			vfs_close(fh->vn);
 			lock_release(fh->mutex);
@@ -154,6 +163,19 @@ int read(int fd, void *buf, size_t size, int* error) {
 			*error = EBADF;
 			return -1;
 		}
+
+
+
+		char kfilename[__NAME_MAX];
+		size_t actual;
+		*error = copyinstr((const_userptr_t) buf, kfilename, __NAME_MAX, &actual);
+		if(*error != 0){
+			return -1;
+		}
+
+
+
+
 		lock_acquire(fh->mutex);
 		struct iovec iovec_obj;
 		struct uio uio_obj;
@@ -180,6 +202,17 @@ int write(int fd, const void *buf, size_t size, int* error) {
 		*error = EFAULT;
 		return -1;
 	} else {
+
+
+
+		char kfilename[__NAME_MAX];
+		size_t actual;
+		*error = copyinstr((const_userptr_t) buf, kfilename, __NAME_MAX, &actual);
+		if(*error != 0){
+			return -1;
+		}
+
+
 
 		lock_acquire(fh->mutex);
 		struct iovec iovec_obj;
@@ -294,15 +327,12 @@ int chdir(const char *pathname)
 	{
 		return EFAULT;
 	}
-	if(pathname == (char *)0x40000000 || pathname == (char *)0x80000000){
-		return EFAULT;
-	}
 
 	char k_pathname[__PATH_MAX];
 	size_t actual;
 	int err = copyinstr((const_userptr_t) pathname, k_pathname, __PATH_MAX, &actual);
 	if(err != 0){
-		return -1;
+		return err;
 	}
 	return vfs_chdir((char*)pathname);
 }
@@ -313,20 +343,21 @@ int __getcwd(char *buf, size_t buflen, int *error)
 		*error = EFAULT ;
 		return -1;
 	}
-	else if(buf == (char *)0x40000000 || buf == (char *)0x80000000){
 
-		*error = EFAULT ;
+	char k_pathname[__PATH_MAX];
+	size_t actual;
+	*error = copyinstr((const_userptr_t) buf, k_pathname, __PATH_MAX, &actual);
+	if(*error != 0){
 		return -1;
-
 	}
 
-	else {
-		struct iovec iovec_obj;
-		struct uio uio_obj;
-		uio_init(&iovec_obj, &uio_obj, (void *) buf, buflen, 0, UIO_READ);
-		return vfs_getcwd(&uio_obj);
 
-	}
-	return 0;
+	struct iovec iovec_obj;
+	struct uio uio_obj;
+	uio_init(&iovec_obj, &uio_obj, (void *) buf, buflen, 0, UIO_READ);
+	*error = vfs_getcwd(&uio_obj);
+	return buflen - uio_obj.uio_resid;
+
+
 }
 
