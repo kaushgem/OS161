@@ -349,34 +349,21 @@ void _exit(int exitcode){
 }
 
 int
-execv(const char *progname, char **argv)
+execv(const char *prog_name, char **argv)
 {
 	int argc = 0;
 
-	// Error check
-
-	//	int err;
-	//	size_t actual;
-	//	char progname[__NAME_MAX];
-	//	err = copyinstr((const_userptr_t) prog_name, progname, __NAME_MAX, &actual);
-	//	if(err != 0){
-	//		return EFAULT;
-	//	}
-	//
-	//	char* argv[__ARG_MAX];
-	//	err = copyinstr((const_userptr_t) arg_v, (char*) argv, __ARG_MAX, &actual);
-	//	if(err != 0){
-	//		return EFAULT;
-	//	}
-
-	//
+	size_t actual;
+	char progname[__NAME_MAX];
+	int err = copyinstr((const_userptr_t) prog_name, progname, __NAME_MAX, &actual);
+	if(err != 0){
+		return EFAULT;
+	}
 
 	if(	   progname == NULL || argv == NULL  ) return EFAULT;
 
 	if (	progname == (const char *)0x40000000 || progname == (const char *)0x80000000 ||
-			argv == (char **)0x40000000 || argv == (char **)0x80000000
-	)
-		return EFAULT;
+			argv == (char **)0x40000000 || argv == (char **)0x80000000)		return EFAULT;
 
 	if(    strcmp(progname,"")    ) return EFAULT;
 	if(    strcmp((const char*)*argv,"")    ) return EINVAL;
