@@ -359,15 +359,50 @@ execv(const char *progname, char **argv)
 {
 	int argc = 0;
 
-	for(int i=0 ; argv[i] != NULL || argc < 500 ; i++){
-		argc++;
+	// Error check
+
+//	int err;
+//	size_t actual;
+//	char progname[__NAME_MAX];
+//	err = copyinstr((const_userptr_t) prog_name, progname, __NAME_MAX, &actual);
+//	if(err != 0){
+//		return EFAULT;
+//	}
+//
+//	char* argv[__ARG_MAX];
+//	err = copyinstr((const_userptr_t) arg_v, (char*) argv, __ARG_MAX, &actual);
+//	if(err != 0){
+//		return EFAULT;
+//	}
+
+//
+
+	if(	   progname == NULL || argv == NULL  ) return EFAULT;
+
+	if (	progname == (const char *)0x40000000 || progname == (const char *)0x80000000 ||
+			argv == (char **)0x40000000 || argv == (char **)0x80000000
+	)
+		return EFAULT;
+
+	if(    strcmp(progname,(const char*)"")    ) return EFAULT;
+	if(    strcmp((const char*)*argv,(const char*)"")    ) return EINVAL;
+	if(    strcmp(progname,(const char*)"\0")   ) return EINVAL;
+	if(    strcmp((const char*)*argv,(const char*)"\0")   ) return EINVAL;
+	if(    strlen(progname) == 0   ) return EINVAL;
+	if(    strlen((const char*)*argv) == 0   ) return EINVAL;
+
+	int i;
+	for(i=0 ; argv[i] != NULL ; i++){
+		if(argv == (char **)0x40000000 || argv == (char **)0x80000000)
+			return EFAULT;
 	}
+	argc = i-1;
+
 	kprintf("\n argc : %d\n",argc);
 
 	struct vnode *v;
 	vaddr_t entrypoint, stackptr;
 	int result;
-
 
 	/* Open the file. */
 	result = vfs_open((char*)progname, O_RDONLY, 0, &v);
@@ -407,7 +442,6 @@ execv(const char *progname, char **argv)
 	}
 
 
-	int i;
 	vaddr_t kargv[argc+1];
 	size_t len_from_top = 0;
 	int arglen = 0, arglen_pad=0;
@@ -415,7 +449,7 @@ execv(const char *progname, char **argv)
 	if(argc > 0)
 	{
 		kargv[argc]=0;
-		for(i=0 ; i < argc ; i++){
+		for(int i=0 ; i < argc ; i++){
 			arglen = strlen(argv[i])+1;
 			arglen_pad =arglen	+ (4- ((arglen)%4));
 			len_from_top = len_from_top + arglen_pad ;
@@ -423,7 +457,7 @@ execv(const char *progname, char **argv)
 			copyout(argv[i], (userptr_t) kargv[i], arglen_pad);
 		}
 		stackptr = stackptr - len_from_top -(argc+1)*sizeof(vaddr_t);
-		for(i=0 ; i <argc+1 ; i++){
+		for(int i=0 ; i <argc+1 ; i++){
 			copyout( &kargv[i], (userptr_t) stackptr, sizeof(vaddr_t));
 			stackptr = stackptr + sizeof(vaddr_t);
 		}
