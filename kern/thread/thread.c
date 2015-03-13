@@ -569,10 +569,10 @@ thread_fork(const char *name,
 
 	// *************************
 
-	/* Lock the current cpu's run queue and make the new thread runnable */
-	//splraise(0,1);
-	//kprintf("\n--> %d / %d \n",(int)getpid(),(int)cpid);
-	//spllower(1,0);
+	int t = splhigh();
+	kprintf("thread_fork: curpid: %d, child pid: %d",(int)getpid(), cpid);
+	splx(t);
+
 	thread_make_runnable(newthread, false);
 
 	/*

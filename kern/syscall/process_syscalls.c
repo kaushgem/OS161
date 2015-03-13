@@ -237,17 +237,18 @@ pid_t waitpid(pid_t pid, int* status, int options, int *error)
 		return -1;
 	}
 
-	//int t= splhigh();
-	//kprintf("\n curpid:%d waiting for the child pid %d to exit", (int)getpid(),(int)pid);
-	//splx(t);
+	int t= splhigh();
+	kprintf("\n curpid:%d waiting for the child pid %d to exit", (int)getpid(),(int)pid);
+	splx(t);
+
 	if(!childProcess->exited){
 		//kprintf("\nwaitpid: cv waiting");
 		P(childProcess->process_sem);
 	}
 
-	//t= splhigh();
-	//skprintf("\ncurpid:%d  child pid %d exited\n",(int)getpid(),(int)pid);
-	//splx(t);
+	t= splhigh();
+	kprintf("\ncurpid:%d  child pid %d exited",(int)getpid(),(int)pid);
+	splx(t);
 	*status = childProcess->exitcode;
 	//remove_child(currentProcess->child, pid);
 	//kprintf("\nwaitpid: cv waiting done. destroying child process");
@@ -259,7 +260,12 @@ pid_t waitpid(pid_t pid, int* status, int options, int *error)
 }
 
 void _exit(int exitcode){
-	//kprintf("process %d exiting\n" , (int)getpid() );
+
+
+	int t= splhigh();
+	kprintf("\n pid %d exited",(int)getpid());
+	splx(t);
+
 
 	struct process_block *currentProcess = pid_array[getpid()];
 	if(currentProcess !=NULL){
