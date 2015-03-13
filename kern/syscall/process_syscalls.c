@@ -117,7 +117,7 @@ pid_t fork(struct trapframe *ptf, int *error)
 	}
 	memcpy(ctf, ptf, sizeof(struct trapframe));
 
-	struct addrspace *caddr = NULL;
+	struct addrspace *caddr = kmalloc(sizeof(struct addrspace));
 	*error = as_copy(curthread->t_addrspace, &caddr);
 	// new
 	if(*error > 0){
