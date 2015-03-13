@@ -117,10 +117,13 @@ int open(const char *filename, int flags, int mode, int *error) {
 }
 
 int close(int fd) {
-	struct fhandle *fh = curthread->t_fdtable[fd];
-	if (fh == NULL || fd < 0 || fd > __OPEN_MAX) {
+
+	if (fd < 0 || fd > __OPEN_MAX) {
 		return EBADF;
 	} else {
+		struct fhandle *fh = curthread->t_fdtable[fd];
+		if(fh==NULL)
+			return EBADF;
 		lock_acquire(fh->mutex);
 		fh->ref_count--;
 		if (fh->ref_count == 0) {
@@ -136,8 +139,8 @@ int close(int fd) {
 }
 
 int read(int fd, void *buf, size_t size, int* error) {
-	struct fhandle *fh = curthread->t_fdtable[fd];
-	if (fh == NULL || fd < 0 || fd > __OPEN_MAX) {
+
+	if ( fd < 0 || fd > __OPEN_MAX) {
 		*error = EBADF;
 		return -1;
 	} else if (buf == NULL) {
@@ -145,6 +148,12 @@ int read(int fd, void *buf, size_t size, int* error) {
 		return -1;
 	} else {
 
+		struct fhandle *fh = curthread->t_fdtable[fd];
+		if(fh==NULL)
+		{
+			*error = EBADF;
+			return -1;
+		}
 		lock_acquire(fh->mutex);
 		struct iovec iovec_obj;
 		struct uio uio_obj;
@@ -242,11 +251,7 @@ off_t lseek(int fd, off_t pos, int whence , int *error)
 		*error = EINVAL;
 		return -1;
 	}
-	else if(pos < 0)
-	{
-		*error = EINVAL;
-		return -1;
-	}else
+	else
 	{
 		// valid lseek
 		fh = curthread->t_fdtable[fd];
@@ -297,6 +302,14 @@ int chdir(const char *pathname)
 	{
 		return EFAULT;
 	}
+
+
+	if(pathname == (char *)0x40000000 || pathname == (char *)0x80000000){
+		return EFAULT;
+
+	}
+
+
 	char k_pathname[__PATH_MAX];
 	size_t actual;
 	int err = copyinstr((const_userptr_t) pathname, k_pathname, __PATH_MAX, &actual);
@@ -311,11 +324,20 @@ int __getcwd(char *buf, size_t buflen, int *error)
 	if(buf==NULL){
 		*error = EFAULT ;
 		return -1;
-	}else {
+	}
+	else if(buf == (char *)0x40000000 || buf == (char *)0x80000000){
+
+		*error = EFAULT ;
+		return -1;
+
+	}
+
+	else {
 		struct iovec iovec_obj;
 		struct uio uio_obj;
 		uio_init(&iovec_obj, &uio_obj, (void *) buf, buflen, 0, UIO_READ);
 		return vfs_getcwd(&uio_obj);
+
 	}
 	return 0;
 }
