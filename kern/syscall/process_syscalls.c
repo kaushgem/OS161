@@ -378,10 +378,10 @@ execv(const char *progname, char **argv)
 	)
 		return EFAULT;
 
-	if(    strcmp(progname,(const char*)"")    ) return EFAULT;
-	if(    strcmp((const char*)*argv,(const char*)"")    ) return EINVAL;
-	if(    strcmp(progname,(const char*)"\0")   ) return EINVAL;
-	if(    strcmp((const char*)*argv,(const char*)"\0")   ) return EINVAL;
+	if(    strcmp(progname,"")    ) return EFAULT;
+	if(    strcmp((const char*)*argv,"")    ) return EINVAL;
+	if(    strcmp(progname,"\0")   ) return EINVAL;
+	if(    strcmp((const char*)*argv,"\0")   ) return EINVAL;
 	if(    strlen(progname) == 0   ) return EINVAL;
 	if(    strlen((const char*)*argv) == 0   ) return EINVAL;
 
