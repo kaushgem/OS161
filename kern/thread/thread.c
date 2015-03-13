@@ -570,7 +570,7 @@ thread_fork(const char *name,
 	// *************************
 
 	int t = splhigh();
-	kprintf("thread_fork: curpid: %d, child pid: %d",(int)getpid(), cpid);
+	kprintf("\n----> ((1))thread_fork: curpid: %d, child pid: %d\n",(int)getpid(), cpid);
 	splx(t);
 
 	thread_make_runnable(newthread, false);
