@@ -157,22 +157,14 @@ int read(int fd, void *buf, size_t size, int* error) {
 		lock_acquire(fh->mutex);
 		struct iovec iovec_obj;
 		struct uio uio_obj;
-
-		//		void *k_buf = kmalloc(sizeof(*buf));
-		//
-		//		*error = copyin((const_userptr_t) buf, k_buf, sizeof(*buf));
-		//		if(*error != 0){
-		//			return -1;
-		//		}
-
 		uio_init(&iovec_obj, &uio_obj, (void *) buf, size, fh->offset, UIO_READ);
 		*error = VOP_READ(fh->vn, &uio_obj);
 		if(*error != 0){
 			lock_release(fh->mutex);
 			return -1;
 		}
-		int bytes_processed = size - uio_obj.uio_resid;
-		fh->offset += bytes_processed;
+		int bytes_processed = uio_obj.uio_offset -fh->offset;
+		fh->offset = uio_obj.uio_offset;
 		lock_release(fh->mutex);
 		return bytes_processed;
 	}
@@ -302,13 +294,9 @@ int chdir(const char *pathname)
 	{
 		return EFAULT;
 	}
-
-
 	if(pathname == (char *)0x40000000 || pathname == (char *)0x80000000){
 		return EFAULT;
-
 	}
-
 
 	char k_pathname[__PATH_MAX];
 	size_t actual;
