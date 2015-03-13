@@ -353,6 +353,8 @@ execv(const char *prog_name, char **argv)
 {
 	int argc = 0;
 
+	if(	   prog_name == NULL || argv == NULL  ) return EFAULT;
+
 	size_t actual;
 	char progname[__NAME_MAX];
 	int err = copyinstr((const_userptr_t) prog_name, progname, __NAME_MAX, &actual);
@@ -360,7 +362,7 @@ execv(const char *prog_name, char **argv)
 		return EFAULT;
 	}
 
-	if(	   progname == NULL || argv == NULL  ) return EFAULT;
+
 
 	if (	progname == (const char *)0x40000000 || progname == (const char *)0x80000000 ||
 			argv == (char **)0x40000000 || argv == (char **)0x80000000)		return EFAULT;
