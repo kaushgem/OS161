@@ -171,6 +171,7 @@ wait_siblings_child(void)
 	 * Busy-wait until the parent writes the pids into the file.
 	 * This sucks, but there's not a whole lot else we can do.
 	 */
+
 	do {
 		rv = lseek(fd, 0, SEEK_SET);
 		if (rv<0) {
@@ -185,6 +186,7 @@ wait_siblings_child(void)
 			return;
 		}
 	} while (rv < (int)sizeof(pids));
+
 
 	if (mypid==pids[0]) {
 		otherpid = pids[1];

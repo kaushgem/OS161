@@ -49,6 +49,6 @@ pid_t getpid(void);
 pid_t waitpid(pid_t pid, int *status, int options, int *error);
 void _exit(int exitcode);
 pid_t fork(struct  trapframe* , int *error);
-//int execv(const char *program, char **args);
+int execv(const char *program, char **args);
 
 #endif /* PROCESS_SYSCALLS_H_ */

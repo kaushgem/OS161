@@ -233,15 +233,40 @@ pid_t getpid()
 
 pid_t waitpid(pid_t pid, int *status, int options, int *error)
 {
-	if(pid < 0 || pid > __PID_MAX || status == NULL){
-		*error = EFAULT;
+	if(pid < 1 || pid > __PID_MAX ){
+		*error = EINVAL;
 		//kprintf("\ninvalid pid");
 		return -1;
 	}
 
-	int spl = splhigh();
+	if(status == NULL)
+	{
+		*error = EFAULT;
+		return -1;
+	}
+
+	if(status == (int *)0x40000000 || status == (int *)0x80000000){
+		*error = EFAULT;
+		return -1;
+	}
+
+	//int spl = splhigh();
 	//kprintf("\nwaitpid: waiting for %d to exit",(int)pid);
-	splx(spl);
+	//splx(spl);
+
+	char *align = (char*)status;
+	int counter = 0;
+	while(align[counter]!=0)
+	{
+		align++;
+		counter++;
+	}
+
+	if(counter%4!=0 || sizeof(align)%4!=0)
+	{
+		return EFAULT;
+		return -1;
+	}
 
 	if(options != 0){
 		*error = EINVAL;
@@ -329,81 +354,87 @@ void _exit(int exitcode){
 	}
 }
 
-//int
-//execv(char *progname, char **argv)
-//{
-//	struct vnode *v;
-//	vaddr_t entrypoint, stackptr;
-//	int result,argc=0;
-//
-//
-//	/* Open the file. */
-//	result = vfs_open(progname, O_RDONLY, 0, &v);
-//	if (result) {
-//		return result;
-//	}
-//
-//	/* We should be a new thread. */
-//	KASSERT(curthread->t_addrspace == NULL);
-//
-//	/* Create a new address space. */
-//	curthread->t_addrspace = as_create();
-//	if (curthread->t_addrspace==NULL) {
-//		vfs_close(v);
-//		return ENOMEM;
-//	}
-//
-//
-//	/* Activate it. */
-//	as_activate(curthread->t_addrspace);
-//
-//	/* Load the executable. */
-//	result = load_elf(v, &entrypoint);
-//	if (result) {
-//		/* thread_exit destroys curthread->t_addrspace */
-//		vfs_close(v);
-//		return result;
-//	}
-//
-//	/* Done with the file now. */
-//	vfs_close(v);
-//
-//	/* Define the user stack in the address space */
-//	result = as_define_stack(curthread->t_addrspace, &stackptr);
-//	if (result) {
-//		/* thread_exit destroys curthread->t_addrspace */
-//		return result;
-//	}
-//
-//	int i;
-//	vaddr_t kargv[argc+1];
-//	size_t len_from_top = 0;
-//	int arglen = 0, arglen_pad=0;
-//
-//	if(argc > 0)
-//	{
-//
-//		kargv[argc]=0;
-//		for(i=0 ; i < argc ; i++){
-//			arglen = strlen(argv[i])+1;
-//			arglen_pad =arglen	+ (4- ((arglen)%4));
-//			len_from_top = len_from_top + arglen_pad ;
-//			kargv[i] =  stackptr - len_from_top;
-//			copyout(argv[i], (userptr_t) kargv[i], arglen_pad);
-//		}
-//		stackptr = stackptr - len_from_top -(argc+1)*sizeof(vaddr_t);
-//		for(i=0 ; i <argc+1 ; i++){
-//			copyout( &kargv[i], (userptr_t) stackptr, sizeof(vaddr_t));
-//			stackptr = stackptr + sizeof(vaddr_t);
-//		}
-//
-//		stackptr = stackptr -(argc+1)*sizeof(vaddr_t);
-//		/* Warp to user mode. */
-//		enter_new_process( argc /*argc*/, (userptr_t) stackptr /*userspace addr of argv*/,
-//				stackptr, entrypoint);
-//	}
-//	/* enter_new_process does not return. */
-//	panic("enter_new_process returned\n");
-//	return EINVAL;
-//}
-//
+int
+execv(const char *progname, char **argv)
+{
+	int argc = 0;
+
+	for(int i=0 ; argv[i] != NULL || argc < 500 ; i++){
+		argc++;
+	}
+	kprintf("\n argc : %d\n",argc);
+
+	struct vnode *v;
+	vaddr_t entrypoint, stackptr;
+	int result;
+
+
+	/* Open the file. */
+	result = vfs_open((char*)progname, O_RDONLY, 0, &v);
+	if (result) {
+		return result;
+	}
+
+	/* We should be a new thread. */
+	KASSERT(curthread->t_addrspace == NULL);
+
+	/* Create a new address space. */
+	curthread->t_addrspace = as_create();
+	if (curthread->t_addrspace==NULL) {
+		vfs_close(v);
+		return ENOMEM;
+	}
+
+	/* Activate it. */
+	as_activate(curthread->t_addrspace);
+
+	/* Load the executable. */
+	result = load_elf(v, &entrypoint);
+	if (result) {
+		/* thread_exit destroys curthread->t_addrspace */
+		vfs_close(v);
+		return result;
+	}
+
+	/* Done with the file now. */
+	vfs_close(v);
+
+	/* Define the user stack in the address space */
+	result = as_define_stack(curthread->t_addrspace, &stackptr);
+	if (result) {
+		/* thread_exit destroys curthread->t_addrspace */
+		return result;
+	}
+
+
+	int i;
+	vaddr_t kargv[argc+1];
+	size_t len_from_top = 0;
+	int arglen = 0, arglen_pad=0;
+
+	if(argc > 0)
+	{
+		kargv[argc]=0;
+		for(i=0 ; i < argc ; i++){
+			arglen = strlen(argv[i])+1;
+			arglen_pad =arglen	+ (4- ((arglen)%4));
+			len_from_top = len_from_top + arglen_pad ;
+			kargv[i] =  stackptr - len_from_top;
+			copyout(argv[i], (userptr_t) kargv[i], arglen_pad);
+		}
+		stackptr = stackptr - len_from_top -(argc+1)*sizeof(vaddr_t);
+		for(i=0 ; i <argc+1 ; i++){
+			copyout( &kargv[i], (userptr_t) stackptr, sizeof(vaddr_t));
+			stackptr = stackptr + sizeof(vaddr_t);
+		}
+
+		stackptr = stackptr -(argc+1)*sizeof(vaddr_t);
+		/* Warp to user mode. */
+		enter_new_process( argc /*argc*/, (userptr_t) stackptr /*userspace addr of argv*/,
+				stackptr, entrypoint);
+	}
+	/* enter_new_process does not return. */
+	panic("enter_new_process returned\n");
+	return EINVAL;
+}
+

@@ -71,11 +71,18 @@ int open(const char *filename, int flags, int mode, int *error) {
 		return -1;
 	}
 
-	if (flags != (O_RDWR|O_CREAT|O_TRUNC))
+	int rwmask = flags&O_ACCMODE;
+
+	if (rwmask != O_RDWR &&  rwmask != O_WRONLY && rwmask != O_RDONLY )
 	{
 		*error = EINVAL;
 		return -1;
 	}
+
+	if(filename == (char *)0x40000000 || filename == (char *)0x80000000){
+			*error = EFAULT;
+			return -1;
+		}
 
 	int i;
 	for (i = 3; i < __OPEN_MAX; i++) {
