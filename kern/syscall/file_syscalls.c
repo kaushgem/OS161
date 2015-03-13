@@ -54,9 +54,9 @@ struct fhandle* create_fhandle(const char* name) {
 
 void delete_fhandle(int fd) {
 	struct fhandle *fh = curthread->t_fdtable[fd];
-	kfree(fh->name);
 	lock_destroy(fh->mutex);
-	kfree(fh->vn);
+	kfree(fh->name);
+	//kfree(fh->vn);
 	kfree(fh);
 	curthread->t_fdtable[fd] = NULL;
 }
@@ -183,6 +183,7 @@ int read(int fd, void *buf, size_t size, int* error) {
 		*error = VOP_READ(fh->vn, &uio_obj);
 		if(*error != 0){
 			lock_release(fh->mutex);
+			kfree((void*)buf);
 			return -1;
 		}
 		int bytes_processed = uio_obj.uio_offset -fh->offset;
@@ -194,8 +195,8 @@ int read(int fd, void *buf, size_t size, int* error) {
 }
 
 int write(int fd, const void *buf, size_t size, int* error) {
-	struct fhandle *fh = curthread->t_fdtable[fd];
-	if (fh == NULL || fd < 0 || fd > __OPEN_MAX) {
+
+	if ( fd < 0 || fd > __OPEN_MAX) {
 		*error = EBADF;
 		return -1;
 	} else if (buf == NULL) {
@@ -204,6 +205,12 @@ int write(int fd, const void *buf, size_t size, int* error) {
 	} else {
 
 
+		struct fhandle *fh = curthread->t_fdtable[fd];
+		if (fh == NULL )
+		{
+			*error = EBADF;
+			return -1;
+		}
 
 		char kfilename[__NAME_MAX];
 		size_t actual;
@@ -221,6 +228,7 @@ int write(int fd, const void *buf, size_t size, int* error) {
 		*error = VOP_WRITE(fh->vn, &uio_obj);
 		if(*error != 0){
 			lock_release(fh->mutex);
+			kfree((void*)buf);
 			return -1;
 		}
 		int bytes_processed = size - uio_obj.uio_resid;
@@ -238,27 +246,27 @@ int dup2(int oldfd, int newfd , int *error){
 	if(	oldfd <0 ||
 			oldfd>__OPEN_MAX ||
 			newfd<0 ||
-			newfd >__OPEN_MAX ||
-
 			curthread->t_fdtable[oldfd] == NULL ||
-			curthread->t_fdtable[newfd] == NULL ||
-			newfd > __OPEN_MAX 	)
+			newfd >=__OPEN_MAX 	)
 	{
 		*error = EBADF;
 		return -1;
 	}
 	else
 	{
-		*error = close(newfd);
-		if(*error >0)
-			return -1;
+		if(curthread->t_fdtable[newfd] != NULL)
+		{
+			*error = close(newfd);
+			if(*error >0)
+				return -1;
+		}
 
 		curthread->t_fdtable[newfd] = curthread->t_fdtable[oldfd];
 		lock_acquire(curthread->t_fdtable[newfd]->mutex);
 		curthread->t_fdtable[newfd]->ref_count++;
 		lock_release(curthread->t_fdtable[newfd]->mutex);
 	}
-	return 0;
+	return oldfd;
 }
 
 

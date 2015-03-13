@@ -55,35 +55,38 @@ main(int argc, char *argv[])
 		errx(1, "Usage: filetest <filename>");
 	}
 
+
 	fd = open(argv[1], O_WRONLY|O_CREAT|O_TRUNC, 0664);
 	if (fd<0) {
 		err(1, "%s: open for write", argv[1]);
 	}
-
+	printf("Passed open .\n");
 
 	rv = write(fd, writebuf, 40);
 	if (rv<0) {
 		err(1, "%s: write", argv[1]);
 	}
-
+	printf("Passed write .\n");
 	rv = close(fd);
 	if (rv<0) {
 		err(1, "%s: close (1st time)", argv[1]);
 	}
-
+	printf("Passed close .\n");
 	fd = open(argv[1], O_RDONLY);
 	if (fd<0) { 
 		err(1, "%s: open for read", argv[1]);
 	}
-
+	printf("Passed open .\n");
 	rv = read(fd, readbuf, 40);
 	if (rv<0) {
 		err(1, "%s: read", argv[1]);
 	}
+	printf("Passed read .\n");
 	rv = close(fd);
 	if (rv<0) {
 		err(1, "%s: close (2nd time)", argv[1]);
 	}
+	printf("Passed close .\n");
 	/* ensure null termination */
 	readbuf[40] = 0;
 
