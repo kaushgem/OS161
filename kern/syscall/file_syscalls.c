@@ -97,7 +97,7 @@ int open(const char *filename, int flags, int mode, int *error) {
 	int i;
 	for (i = 3; i < __OPEN_MAX; i++) {
 		if (curthread->t_fdtable[i] == NULL ) {
-			curthread->t_fdtable[i] = create_fhandle(filename);
+			curthread->t_fdtable[i] = create_fhandle(kfilename);
 			fh = curthread->t_fdtable[i];
 			fd = i;
 			break;
@@ -160,11 +160,6 @@ int read(int fd, void *buf, size_t size, int* error) {
 			return -1;
 		}
 
-		void* buffer = kmalloc(sizeof(*buf));
-		*error = copyin((const_userptr_t) buf, buffer, sizeof(*buf));
-		if(*error != 0){
-			return -1;
-		}
 		lock_acquire(fh->mutex);
 		struct iovec iovec_obj;
 		struct uio uio_obj;
@@ -198,11 +193,7 @@ int write(int fd, const void *buf, size_t size, int* error) {
 			*error = EBADF;
 			return -1;
 		}
-		void* buffer = kmalloc(sizeof(*buf));
-		*error = copyin((const_userptr_t) buf, buffer, sizeof(*buf));
-		if(*error != 0){
-			return -1;
-		}
+
 		lock_acquire(fh->mutex);
 		struct iovec iovec_obj;
 		struct uio uio_obj;
