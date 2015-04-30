@@ -400,3 +400,13 @@ execv(const char *prog_name, char **argv)
 	return EINVAL;
 }
 
+void *
+sbrk(intptr_t amount, int *error){
+	//struct addrspace *as = curthread->t_addrspace;
+
+	(void)amount;
+	(void)error;
+
+	return NULL;
+}
+
