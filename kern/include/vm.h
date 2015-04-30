@@ -44,20 +44,40 @@
 #define VM_FAULT_WRITE       1    /* A write was attempted */
 #define VM_FAULT_READONLY    2    /* A write to a readonly page was attempted*/
 
+//state
+#define FREE 0
+#define DIRTY 1
+#define CLEAN 2
+#define FIXED 3
+
+
+struct coremap_entry *coremap;
+
+struct coremap_entry{
+	vaddr_t vaddr;
+	struct addrspace* as;
+	int npages;
+	int state;
+};
 
 /* Initialization function */
 void vm_bootstrap(void);
 
-/* Fault handling function called by trap code */
-int vm_fault(int faulttype, vaddr_t faultaddress);
-
 /* Allocate/free kernel heap pages (called by kmalloc/kfree) */
 vaddr_t alloc_kpages(int npages);
+vaddr_t alloc_upages(struct addrspace *as, int npages);
+paddr_t getppages(int npages);
+paddr_t getppages_vm(struct addrspace *as, int npages);
+
+// Free kernel and user pages
 void free_kpages(vaddr_t addr);
+void free_upages(vaddr_t addr);
 
 /* TLB shootdown handling called from interprocessor_interrupt */
 void vm_tlbshootdown_all(void);
 void vm_tlbshootdown(const struct tlbshootdown *);
 
+/* Fault handling function called by trap code */
+int vm_fault(int faulttype, vaddr_t faultaddress);
 
 #endif /* _VM_H_ */
