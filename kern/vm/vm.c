@@ -9,12 +9,15 @@
 #include <addrspace.h>
 #include <vm.h>
 
+
 static struct spinlock stealmem_lock = SPINLOCK_INITIALIZER;
 static struct spinlock coremap_lock = SPINLOCK_INITIALIZER;
+
 
 int total_pages = 0;
 bool is_vm_bootstrapped = false;
 paddr_t coremap_base = 0;
+
 
 void vm_bootstrap(void){
 	paddr_t start, end, free_addr;
@@ -39,19 +42,20 @@ void vm_bootstrap(void){
 			coremap[i].state = FIXED;
 		else
 			coremap[i].state = FREE;
+
 	}
 
 	is_vm_bootstrapped = true;
 }
 
-/* Allocate/free kernel heap pages (called by kmalloc/kfree) */
+
 vaddr_t alloc_kpages(int npages){
 	paddr_t pa;
 
 	if(!is_vm_bootstrapped){
 		pa = getppages(npages);
 	}else{
-		pa = getppages_vm(NULL, npages);
+		pa = getppages_vm(npages);
 	}
 
 	if (pa==0) {
@@ -61,21 +65,6 @@ vaddr_t alloc_kpages(int npages){
 	return PADDR_TO_KVADDR(pa);
 }
 
-vaddr_t alloc_upages(struct addrspace *as, int npages){
-	paddr_t pa;
-
-	if(!is_vm_bootstrapped){
-		pa = getppages(npages);
-	}else{
-		pa = getppages_vm(as, npages);
-	}
-
-	if (pa==0) {
-		return 0;
-	}
-
-	return PADDR_TO_KVADDR(pa);
-}
 
 paddr_t getppages(int npages){
 	paddr_t addr;
@@ -87,7 +76,8 @@ paddr_t getppages(int npages){
 	return addr;
 }
 
-paddr_t getppages_vm(struct addrspace *as, int npages){
+
+paddr_t getppages_vm(int npages){
 	paddr_t addr;
 	bool found_pages = true;
 
@@ -110,17 +100,10 @@ paddr_t getppages_vm(struct addrspace *as, int npages){
 
 			coremap[i].vaddr = PADDR_TO_KVADDR(addr);
 			coremap[i].npages = npages;
-
-			if(as == NULL){				// Kernel space
-				for(int k=0; k<npages ; k++){
-					coremap[i++].state = FIXED;
-				}
-			}else{						// User space
-				coremap[i].as = as;
-				for(int k=0; k<npages ; k++){
-					coremap[i++].state = DIRTY;
-				}
+			for(int k=0; k<npages ; k++){
+				coremap[i++].state = FIXED;
 			}
+
 			break;
 		}
 	}
@@ -129,14 +112,15 @@ paddr_t getppages_vm(struct addrspace *as, int npages){
 	return addr;
 }
 
-void free_kpages(vaddr_t addr){
+
+void free_kpages(vaddr_t vaddr){
 
 	int npages_to_free = 0;
 	spinlock_acquire(&coremap_lock);
 
 	int i;
 	for(i=0 ; i<total_pages ; i++){
-		if(addr == coremap[i].vaddr)
+		if(vaddr == coremap[i].vaddr)
 			npages_to_free = coremap[i].npages;
 	}
 
@@ -150,43 +134,64 @@ void free_kpages(vaddr_t addr){
 	spinlock_release(&coremap_lock);
 }
 
-void free_upages(vaddr_t addr){
 
-	int npages_to_free = 0;
+paddr_t alloc_userpage(struct addrspace *as, vaddr_t vaddr){
+	paddr_t addr;
+
+	spinlock_acquire(&coremap_lock);
+
+	for(int i=0; i<total_pages; i++){
+		if(coremap[i].state == FREE){
+			//addr = coremap_base + i * PAGE_SIZE; //4k padding
+			//coremap[i].vaddr = PADDR_TO_KVADDR(addr);
+			coremap[i].vaddr = vaddr;
+			coremap[i].as = as;
+			coremap[i].state = DIRTY;
+			break;
+		}
+	}
+
+	spinlock_release(&coremap_lock);
+	return addr;
+}
+
+
+void free_userpage(vaddr_t vaddr){
+
 	spinlock_acquire(&coremap_lock);
 
 	int i;
 	for(i=0 ; i<total_pages ; i++){
-		if(addr == coremap[i].vaddr){
+		if(vaddr == coremap[i].vaddr){
 			if(coremap[i].state == FIXED){
-				kprintf("Cannot free, It's a kernel page");
+				kprintf("\n Err** Cannot free, It's a kernel page\n");
 				return;
 			}else{
-				npages_to_free = coremap[i].npages;
+				coremap[i].vaddr = 0;
+				coremap[i].as = NULL;
+				coremap[i].npages = 1;
+				coremap[i].state = FREE;
 			}
+		}else{
+			kprintf("\n Err** Virtual Page number not found\n");
+			return;
 		}
-	}
-
-	for(int j=0 ; j<npages_to_free ; j++){
-		coremap[i].npages = 1;
-		coremap[i].state = FREE;
-		coremap[i].vaddr = 0;
-		i++;
 	}
 
 	spinlock_release(&coremap_lock);
 }
 
-/* TLB shootdown handling called from interprocessor_interrupt */
+
 void vm_tlbshootdown_all(void){
 
 }
+
+
 void vm_tlbshootdown(const struct tlbshootdown * tlb){
 	(void)tlb;
 }
 
 
-/* Fault handling function called by trap code */
 int vm_fault(int faulttype, vaddr_t faultaddress){
 	(void)faulttype;
 	(void)faultaddress;

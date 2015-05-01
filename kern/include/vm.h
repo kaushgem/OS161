@@ -65,13 +65,13 @@ void vm_bootstrap(void);
 
 /* Allocate/free kernel heap pages (called by kmalloc/kfree) */
 vaddr_t alloc_kpages(int npages);
-vaddr_t alloc_upages(struct addrspace *as, int npages);
 paddr_t getppages(int npages);
-paddr_t getppages_vm(struct addrspace *as, int npages);
+paddr_t getppages_vm(int npages);
+void free_kpages(vaddr_t vaddr);
 
-// Free kernel and user pages
-void free_kpages(vaddr_t addr);
-void free_upages(vaddr_t addr);
+// Allocate/Free User page
+vaddr_t alloc_userpage(struct addrspace *as, vaddr_t vaddr);
+void free_userpage(vaddr_t vaddr);
 
 /* TLB shootdown handling called from interprocessor_interrupt */
 void vm_tlbshootdown_all(void);
