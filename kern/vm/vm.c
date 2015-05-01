@@ -106,7 +106,7 @@ paddr_t getppages_vm(struct addrspace *as, int npages){
 
 		if(found_pages){
 
-			addr = coremap_base + 4 * i; //4k padding
+			addr = coremap_base + i * PAGE_SIZE; //4k padding
 
 			coremap[i].vaddr = PADDR_TO_KVADDR(addr);
 			coremap[i].npages = npages;
