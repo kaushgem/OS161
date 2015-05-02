@@ -53,6 +53,11 @@ as_create(void)
 	 * Initialize as needed.
 	 */
 
+	as->hend = NULL;
+	as->hstart = NULL;
+	as->pte = NULL;
+	as->reg = NULL;
+
 	return as;
 }
 
@@ -70,8 +75,85 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 	 * Write this.
 	 */
 
+	// copy regions
+
+	struct region *oldHead = old->reg;
+	if (oldHead == NULL) return NULL;
+
+	struct region *newHead = kmalloc(sizeof(struct region));
+	newHead->readable = oldHead->readable;
+	newHead->writeable = oldHead->writeable;
+	newHead->executable = oldHead->executable;
+	newHead->size = oldHead->size;
+	newHead->va = oldHead->va;
+
+	struct region *newreg = newHead;
+	oldHead = oldHead->next;
+
+
+	while(oldHead != NULL) {
+		newreg->next = malloc(sizeof(struct region));
+
+		newreg->readable = oldHead->readable;
+		newreg->writeable = oldHead->writeable;
+		newreg->executable = oldHead->executable;
+		newreg->size = oldHead->size;
+		newreg->va = oldHead->va;
+
+		newreg=newreg->next;
+		oldHead = oldHead->next;
+	}
+	newreg->next = NULL;
+
+
+
+
+
+	// copy page table entries
+
+
+	struct page_table_entry *oldpteHead = old->pte;
+		if (oldpteHead == NULL) return NULL;
+
+		struct page_table_entry *newpteHead = kmalloc(sizeof(struct page_table_entry));
+		newpteHead->core_index= oldpteHead->core_index;
+		newpteHead->permissions = oldpteHead->permissions;
+		newpteHead->va = oldpteHead->va;
+
+		// call coremap to get the new virtual address after copy
+
+	//	newpteHead->physical_addr =
+
+		//
+
+		struct page_table_entry *newpte = newpteHead;
+		oldpteHead = oldpteHead->next;
+
+
+		while(oldpteHead != NULL) {
+			newpte->next = malloc(sizeof(struct page_table_entry));
+
+			newpte->core_index = oldpteHead->core_index;
+			newpte->permissions = oldpteHead->permissions;
+			newpte->va = oldpteHead->va;
+			// newpte->physical_addr =
+
+			newpte=newpte->next;
+			oldpteHead = oldpteHead->next;
+		}
+		newpte->next = NULL;
+
+	// copy heap limits
+
+	newas->hend = old->hend;
+	newas->hstart = old->hstart;
+
+
+
+
+
 	(void)old;
-	
+
 	*ret = newas;
 	return 0;
 }
@@ -82,7 +164,9 @@ as_destroy(struct addrspace *as)
 	/*
 	 * Clean up as needed.
 	 */
-	
+
+
+
 	kfree(as);
 }
 
@@ -92,7 +176,7 @@ as_activate(struct addrspace *as)
 	/*
 	 * Write this.
 	 */
-
+	vm_tlbshootdown_all();
 	(void)as;  // suppress warning until code gets written
 }
 
@@ -108,19 +192,55 @@ as_activate(struct addrspace *as)
  */
 int
 as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
-		 int readable, int writeable, int executable)
+		int readable, int writeable, int executable)
 {
 	/*
 	 * Write this.
 	 */
 
-	(void)as;
-	(void)vaddr;
-	(void)sz;
-	(void)readable;
-	(void)writeable;
-	(void)executable;
-	return EUNIMP;
+	// align vaddr
+	if(vaddr&~(vaddr_t)PAGE_FRAME !=0)
+	{
+		vaddr = PAGE_SIZE + (vaddr/PAGE_SIZE )* PAGE_SIZE;
+	}
+
+	// align size
+	if(sz&~(vaddr_t)PAGE_FRAME !=0)
+	{
+		sz = PAGE_SIZE + (sz/PAGE_SIZE ) * PAGE_SIZE;
+	}
+
+
+
+	struct region *headreg = as->reg;
+
+	while(headreg!=NULL)
+	{
+		headreg = headreg->next;
+	}
+
+
+	struct region *newreg= malloc(sizeof(struct region));
+	if(newreg == NULL)
+	{
+		return ENOMEM;
+	}
+
+	newreg->readable = readable;
+	newreg->writeable = writeable;
+	newreg->executable = executable;
+	newreg->size = sz;
+	newreg->va = vaddr;
+
+	newreg->next = NULL;
+	headreg ->next = newreg;
+
+	if (as->hstart < (vaddr + sz)) {
+			as->hstart = vaddr + sz;
+			as->hend = as->hstart;
+		}
+
+	return 0;
 }
 
 int
@@ -156,7 +276,7 @@ as_define_stack(struct addrspace *as, vaddr_t *stackptr)
 
 	/* Initial user-level stack pointer */
 	*stackptr = USERSTACK;
-	
+
 	return 0;
 }
 

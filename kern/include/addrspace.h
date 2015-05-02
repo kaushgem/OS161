@@ -50,16 +50,20 @@ struct vnode;
 
 struct page_table_entry{
 	vaddr_t va;
-	paddr_t pa;
+	int core_index;
+	int physical_addr;
 	int permissions;
 	struct page_table_entry *next;
 };
 
 struct region{
 	vaddr_t va;
-	int size;
-	int permissions;
-	struct region *nest;
+	size_t size;
+	int readable:1;
+	int writeable:1;
+	int executable:1;
+	struct region *next;
+
 };
 
 struct addrspace {
@@ -77,7 +81,7 @@ struct addrspace {
         struct region *reg;
         vaddr_t hstart;
         vaddr_t hend;
-        // stack ??
+
 #endif
 };
 
