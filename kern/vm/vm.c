@@ -120,8 +120,10 @@ void free_kpages(vaddr_t vaddr){
 
 	int i;
 	for(i=0 ; i<total_pages ; i++){
-		if(vaddr == coremap[i].vaddr)
+		if(vaddr == coremap[i].vaddr){
 			npages_to_free = coremap[i].npages;
+			break;
+		}
 	}
 
 	for(int j=0 ; j<npages_to_free ; j++){
@@ -183,17 +185,31 @@ void free_userpage(vaddr_t vaddr){
 
 
 void vm_tlbshootdown_all(void){
-
+	int i, spl;
+	spl = splhigh();
+	for (i=0; i<NUM_TLB; i++) {
+		tlb_write(TLBHI_INVALID(i), TLBLO_INVALID(), i);
+	}
+	splx(spl);
 }
 
 
 void vm_tlbshootdown(const struct tlbshootdown * tlb){
 	(void)tlb;
+	int i, spl;
+	spl = splhigh();
+	for (i=0; i<NUM_TLB; i++) {
+		tlb_write(TLBHI_INVALID(i), TLBLO_INVALID(), i);
+	}
+	splx(spl);
 }
 
 
 int vm_fault(int faulttype, vaddr_t faultaddress){
 	(void)faulttype;
 	(void)faultaddress;
+
+
+
 	return 0;
 }
