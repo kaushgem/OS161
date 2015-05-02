@@ -106,42 +106,39 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 	newreg->next = NULL;
 
 
-
-
-
 	// copy page table entries
 
 
 	struct page_table_entry *oldpteHead = old->pte;
-		if (oldpteHead == NULL) return NULL;
+	if (oldpteHead == NULL) return NULL;
 
-		struct page_table_entry *newpteHead = kmalloc(sizeof(struct page_table_entry));
-		newpteHead->core_index= oldpteHead->core_index;
-		newpteHead->permissions = oldpteHead->permissions;
-		newpteHead->va = oldpteHead->va;
+	struct page_table_entry *newpteHead = kmalloc(sizeof(struct page_table_entry));
+	newpteHead->core_index= oldpteHead->core_index;
+	newpteHead->permissions = oldpteHead->permissions;
+	newpteHead->va = oldpteHead->va;
 
-		// call coremap to get the new virtual address after copy
+	// call coremap to get the new virtual address after copy
 
 	//	newpteHead->physical_addr =
 
-		//
+	//
 
-		struct page_table_entry *newpte = newpteHead;
+	struct page_table_entry *newpte = newpteHead;
+	oldpteHead = oldpteHead->next;
+
+
+	while(oldpteHead != NULL) {
+		newpte->next = malloc(sizeof(struct page_table_entry));
+
+		newpte->core_index = oldpteHead->core_index;
+		newpte->permissions = oldpteHead->permissions;
+		newpte->va = oldpteHead->va;
+		// newpte->physical_addr =
+
+		newpte=newpte->next;
 		oldpteHead = oldpteHead->next;
-
-
-		while(oldpteHead != NULL) {
-			newpte->next = malloc(sizeof(struct page_table_entry));
-
-			newpte->core_index = oldpteHead->core_index;
-			newpte->permissions = oldpteHead->permissions;
-			newpte->va = oldpteHead->va;
-			// newpte->physical_addr =
-
-			newpte=newpte->next;
-			oldpteHead = oldpteHead->next;
-		}
-		newpte->next = NULL;
+	}
+	newpte->next = NULL;
 
 	// copy heap limits
 
@@ -165,6 +162,23 @@ as_destroy(struct addrspace *as)
 	 * Clean up as needed.
 	 */
 
+
+	struct page_table_entry *pte = as->pte;
+	while(pte!=NULL)
+	{
+		struct page_table_entry *next = pte->next;
+		kfree(pte);
+		pte = next;
+	}
+
+
+	struct region *reg = as->reg;
+	while(reg!=NULL)
+	{
+		struct region *next = reg->next;
+		kfree(reg);
+		reg = next;
+	}
 
 
 	kfree(as);
@@ -236,9 +250,9 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 	headreg ->next = newreg;
 
 	if (as->hstart < (vaddr + sz)) {
-			as->hstart = vaddr + sz;
-			as->hend = as->hstart;
-		}
+		as->hstart = vaddr + sz;
+		as->hend = as->hstart;
+	}
 
 	return 0;
 }
