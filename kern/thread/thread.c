@@ -566,7 +566,8 @@ thread_fork(const char *name,
 	}
 
 	newthread->pid = cpid;
-	pid_array[getpid()]->childpid[cpid]=true;
+	if(getpid()>1)
+		pid_array[getpid()]->childpid[cpid]=true;
 	pid_array[cpid] = cpb;
 	//spinlock_release(&pid_array_spinlock);
 	lock_release(pid_array_lock);
@@ -574,7 +575,7 @@ thread_fork(const char *name,
 	// *************************
 
 	int t = splhigh();
-	kprintf("\n----> ((1))thread_fork: curpid: %d, child pid: %d\n",(int)getpid(), cpid);
+	//kprintf("\n----> ((1))thread_fork: curpid: %d, child pid: %d\n",(int)getpid(), cpid);
 	splx(t);
 
 	thread_make_runnable(newthread, false);
