@@ -38,6 +38,10 @@
  * assignment, this file is not compiled or linked or in any way
  * used. The cheesy hack versions in dumbvm.c are used instead.
  */
+vaddr_t as_reset_rw_permission(vaddr_t vadd);
+vaddr_t as_set_rw_permission(vaddr_t vadd);
+int as_get_permission(vaddr_t vadd);
+int get_permissions_int(int r, int w, int x);
 
 struct addrspace *
 as_create(void)
@@ -53,10 +57,12 @@ as_create(void)
 	 * Initialize as needed.
 	 */
 
-	as->hend = NULL;
-	as->hstart = NULL;
-	as->pte = NULL;
-	as->reg = NULL;
+	as->as_vbase1 = 0;
+	as->as_npages1 = 0;
+	as->as_vbase2 = 0;
+	as->as_npages2 = 0;
+	as->hend = 0;
+	as->hstart = 0;
 
 	return as;
 }
@@ -76,41 +82,19 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 	 */
 
 	// copy regions
-
-	struct region *oldHead = old->reg;
-	if (oldHead == NULL) return NULL;
-
-	struct region *newHead = kmalloc(sizeof(struct region));
-	newHead->readable = oldHead->readable;
-	newHead->writeable = oldHead->writeable;
-	newHead->executable = oldHead->executable;
-	newHead->size = oldHead->size;
-	newHead->va = oldHead->va;
-
-	struct region *newreg = newHead;
-	oldHead = oldHead->next;
+	newas->as_vbase1 = old->as_vbase1;
+	newas->as_npages1 = old->as_npages1;
+	newas->as_vbase2 = old->as_vbase2;
+	newas->as_npages2 = old->as_npages2;
 
 
-	while(oldHead != NULL) {
-		newreg->next = malloc(sizeof(struct region));
-
-		newreg->readable = oldHead->readable;
-		newreg->writeable = oldHead->writeable;
-		newreg->executable = oldHead->executable;
-		newreg->size = oldHead->size;
-		newreg->va = oldHead->va;
-
-		newreg=newreg->next;
-		oldHead = oldHead->next;
-	}
-	newreg->next = NULL;
 
 
 	// copy page table entries
 
 
 	struct page_table_entry *oldpteHead = old->pte;
-	if (oldpteHead == NULL) return NULL;
+	if (oldpteHead == NULL) return ENOMEM;
 
 	struct page_table_entry *newpteHead = kmalloc(sizeof(struct page_table_entry));
 	newpteHead->core_index= oldpteHead->core_index;
@@ -128,7 +112,7 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 
 
 	while(oldpteHead != NULL) {
-		newpte->next = malloc(sizeof(struct page_table_entry));
+		newpte->next = kmalloc(sizeof(struct page_table_entry));
 
 		newpte->core_index = oldpteHead->core_index;
 		newpte->permissions = oldpteHead->permissions;
@@ -171,16 +155,6 @@ as_destroy(struct addrspace *as)
 		pte = next;
 	}
 
-
-	struct region *reg = as->reg;
-	while(reg!=NULL)
-	{
-		struct region *next = reg->next;
-		kfree(reg);
-		reg = next;
-	}
-
-
 	kfree(as);
 }
 
@@ -204,6 +178,7 @@ as_activate(struct addrspace *as)
  * moment, these are ignored. When you write the VM system, you may
  * want to implement them.
  */
+
 int
 as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 		int readable, int writeable, int executable)
@@ -212,42 +187,30 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 	 * Write this.
 	 */
 
-	// align vaddr
-	if(vaddr&~(vaddr_t)PAGE_FRAME !=0)
-	{
-		vaddr = PAGE_SIZE + (vaddr/PAGE_SIZE )* PAGE_SIZE;
+	size_t npages;
+
+	/* Align the region. First, the base... */
+	sz += vaddr & ~(vaddr_t)PAGE_FRAME;
+	vaddr &= PAGE_FRAME;
+
+	/* ...and now the length. */
+	sz = (sz + PAGE_SIZE - 1) & PAGE_FRAME;
+
+	npages = sz / PAGE_SIZE;
+
+
+
+	int permission = get_permissions_int( readable,  writeable,  executable);
+	vaddr = vaddr|permission;
+
+	if (as->as_vbase1 == 0) {
+		as->as_vbase1 = vaddr;
+		as->as_npages1 = npages;
+
+	}else if (as->as_vbase2 == 0) {
+		as->as_vbase2 = vaddr;
+		as->as_npages2 = npages;
 	}
-
-	// align size
-	if(sz&~(vaddr_t)PAGE_FRAME !=0)
-	{
-		sz = PAGE_SIZE + (sz/PAGE_SIZE ) * PAGE_SIZE;
-	}
-
-
-
-	struct region *headreg = as->reg;
-
-	while(headreg!=NULL)
-	{
-		headreg = headreg->next;
-	}
-
-
-	struct region *newreg= malloc(sizeof(struct region));
-	if(newreg == NULL)
-	{
-		return ENOMEM;
-	}
-
-	newreg->readable = readable;
-	newreg->writeable = writeable;
-	newreg->executable = executable;
-	newreg->size = sz;
-	newreg->va = vaddr;
-
-	newreg->next = NULL;
-	headreg ->next = newreg;
 
 	if (as->hstart < (vaddr + sz)) {
 		as->hstart = vaddr + sz;
@@ -264,6 +227,14 @@ as_prepare_load(struct addrspace *as)
 	 * Write this.
 	 */
 
+	as_set_rw_permission(as->as_vbase1);
+	as_set_rw_permission(as->as_vbase2);
+
+
+
+
+
+
 	(void)as;
 	return 0;
 }
@@ -274,6 +245,9 @@ as_complete_load(struct addrspace *as)
 	/*
 	 * Write this.
 	 */
+
+	as_reset_rw_permission(as->as_vbase1);
+	as_reset_rw_permission(as->as_vbase2);
 
 	(void)as;
 	return 0;
@@ -292,5 +266,40 @@ as_define_stack(struct addrspace *as, vaddr_t *stackptr)
 	*stackptr = USERSTACK;
 
 	return 0;
+}
+
+int get_permissions_int(int r, int w, int x)
+{
+	int op = 0;
+	op=r+(w<<w)+(x<<2*x);
+	return op;
+}
+
+
+vaddr_t as_set_rw_permission(vaddr_t vadd)
+{
+	int l3=vadd&7;
+	int  b3=7;
+	int  lb=(l3<<3)|b3;
+	vadd = vadd|lb;
+	return vadd;
+
+}
+
+vaddr_t as_reset_rw_permission(vaddr_t vadd)
+{
+	int lb3=vadd&0x3F;
+	lb3 = lb3>>3;
+	vadd = vadd&~0x3F;
+	vadd=vadd|lb3;
+	return vadd;
+
+}
+
+int as_get_permission(vaddr_t vadd)
+{
+	int op = 0;
+	op=vadd&7;
+	return op;
 }
 

@@ -56,15 +56,6 @@ struct page_table_entry{
 	struct page_table_entry *next;
 };
 
-struct region{
-	vaddr_t va;
-	size_t size;
-	int readable:1;
-	int writeable:1;
-	int executable:1;
-	struct region *next;
-
-};
 
 struct addrspace {
 #if OPT_DUMBVM
@@ -78,7 +69,15 @@ struct addrspace {
 #else
         /* Put stuff here for your VM system */
         struct page_table_entry *pte;
-        struct region *reg;
+
+        vaddr_t as_vbase1;
+        size_t as_npages1;
+
+        vaddr_t as_vbase2;
+        size_t as_npages2;
+
+        vaddr_t as_stackvbase;
+
         vaddr_t hstart;
         vaddr_t hend;
 
