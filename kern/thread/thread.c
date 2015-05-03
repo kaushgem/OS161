@@ -566,8 +566,11 @@ thread_fork(const char *name,
 	}
 
 	newthread->pid = cpid;
-	if(getpid()>1)
+	if(getpid()>1){
 		pid_array[getpid()]->childpid[cpid]=true;
+	}{
+		kprintf("\n\n**  pid = -1  **\n\n");
+	}
 	pid_array[cpid] = cpb;
 	//spinlock_release(&pid_array_spinlock);
 	lock_release(pid_array_lock);
