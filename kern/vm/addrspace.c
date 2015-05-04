@@ -103,7 +103,7 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 
 	// call coremap to get the new virtual address after copy
 
-	//	newpteHead->physical_addr =
+	//
 
 	//
 

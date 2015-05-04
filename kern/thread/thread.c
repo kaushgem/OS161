@@ -570,6 +570,10 @@ thread_fork(const char *name,
 		pid_array[getpid()]->childpid[cpid]=true;
 	}{
 		kprintf("\n\n**  pid = -1  **\n\n");
+		struct process_block  *ipb = init_process_block(getpid());
+		curthread->pid=1;
+		pid_array[curthread->pid] = ipb;
+		pid_array[getpid()]->childpid[cpid]=true;
 	}
 	pid_array[cpid] = cpb;
 	//spinlock_release(&pid_array_spinlock);
@@ -578,7 +582,7 @@ thread_fork(const char *name,
 	// *************************
 
 	int t = splhigh();
-	//kprintf("\n----> ((1))thread_fork: curpid: %d, child pid: %d\n",(int)getpid(), cpid);
+	kprintf("\n----> ((1))thread_fork: curpid: %d, child pid: %d\n",(int)getpid(), cpid);
 	splx(t);
 
 	thread_make_runnable(newthread, false);
@@ -606,7 +610,7 @@ void  destroy_zombies(void)
 		kprintf("\n          hhhhhhhhhhh  %d",curcpu->c_zombies.tl_count);
 		struct thread *tln = curcpu->c_zombies.tl_tail.tln_self;
 		threadlist_remove(&curcpu->c_zombies, curcpu->c_zombies.tl_tail.tln_self);
-		 thread_destroy(tln);
+		thread_destroy(tln);
 	}
 
 

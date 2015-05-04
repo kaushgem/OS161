@@ -169,7 +169,7 @@ common_prog(int nargs, char **args)
 		int res = waitpid(t1->pid, &status, 0, &error);
 		if(res ==-1)
 		{
-			kprintf("error in waiting for process %d to exit", (int) t1->pid);
+			// kprintf("\nError Number(%d) in waiting for process %d to exit", error, (int) t1->pid);
 		}
 	}
 

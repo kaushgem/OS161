@@ -215,7 +215,7 @@ pid_t waitpid(pid_t pid, int* status, int options, int *error)
 	if(currentProcess->parent_pid == childProcess->parent_pid)
 	{
 		*error = ECHILD;
-		//kprintf("\ninvalid child process: %d", (int)pid);
+		//kprintf("\n Waiting for itself // invalid child process: %d", (int)pid);
 		return -1;
 	}
 
@@ -243,7 +243,7 @@ pid_t waitpid(pid_t pid, int* status, int options, int *error)
 	isChild = currentProcess->childpid[pid];
 
 	if(!isChild){
-		//kprintf("\n not a  child process");
+		kprintf("\n not a  child process");
 		*error = ECHILD;
 		return -1;
 	}
