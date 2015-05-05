@@ -569,7 +569,7 @@ thread_fork(const char *name,
 	if(getpid()>1){
 		pid_array[getpid()]->childpid[cpid]=true;
 	}{
-		kprintf("\n\n**  pid = -1  **\n\n");
+		// kprintf("\n\n**  pid = -1  **\n\n");
 		struct process_block  *ipb = init_process_block(getpid());
 		curthread->pid=1;
 		pid_array[curthread->pid] = ipb;
@@ -582,7 +582,7 @@ thread_fork(const char *name,
 	// *************************
 
 	int t = splhigh();
-	kprintf("\n----> ((1))thread_fork: curpid: %d, child pid: %d\n",(int)getpid(), cpid);
+	// kprintf("\n----> ((1))thread_fork: curpid: %d, child pid: %d\n",(int)getpid(), cpid);
 	splx(t);
 
 	thread_make_runnable(newthread, false);
