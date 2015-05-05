@@ -40,7 +40,7 @@
  */
 vaddr_t as_reset_rw_permission(vaddr_t vadd);
 vaddr_t as_set_rw_permission(vaddr_t vadd);
-int as_get_permission(vaddr_t vadd);
+
 int get_permissions_int(int r, int w, int x);
 
 struct addrspace *
@@ -88,8 +88,6 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 	newas->as_npages2 = old->as_npages2;
 
 
-
-
 	// copy page table entries
 
 
@@ -97,15 +95,15 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 	if (oldpteHead == NULL) return ENOMEM;
 
 	struct page_table_entry *newpteHead = kmalloc(sizeof(struct page_table_entry));
-	newpteHead->core_index= oldpteHead->core_index;
-	newpteHead->permissions = oldpteHead->permissions;
 	newpteHead->va = oldpteHead->va;
 
 	// call coremap to get the new virtual address after copy
 
-	//
+	newpteHead->pa = alloc_userpage(newas,oldpteHead->va);
+	memmove((void *)PADDR_TO_KVADDR(newpteHead->pa),
+			(const void *)PADDR_TO_KVADDR(oldpteHead->pa),
+			PAGE_SIZE);
 
-	//
 
 	struct page_table_entry *newpte = newpteHead;
 	oldpteHead = oldpteHead->next;
@@ -113,11 +111,16 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 
 	while(oldpteHead != NULL) {
 		newpte->next = kmalloc(sizeof(struct page_table_entry));
-
-		newpte->core_index = oldpteHead->core_index;
-		newpte->permissions = oldpteHead->permissions;
 		newpte->va = oldpteHead->va;
 		// newpte->physical_addr =
+
+		newpte->pa = alloc_userpage(newas,oldpteHead->va);
+			memmove((void *)PADDR_TO_KVADDR(newpte->pa),
+					(const void *)PADDR_TO_KVADDR(oldpteHead->pa),
+					PAGE_SIZE);
+
+
+
 
 		newpte=newpte->next;
 		oldpteHead = oldpteHead->next;
@@ -296,10 +299,4 @@ vaddr_t as_reset_rw_permission(vaddr_t vadd)
 
 }
 
-int as_get_permission(vaddr_t vadd)
-{
-	int op = 0;
-	op=vadd&7;
-	return op;
-}
 

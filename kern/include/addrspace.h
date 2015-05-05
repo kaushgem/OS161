@@ -50,9 +50,8 @@ struct vnode;
 
 struct page_table_entry{
 	vaddr_t va;
-	int core_index;
+	paddr_t pa;
 	int physical_addr;
-	int permissions;
 	struct page_table_entry *next;
 };
 

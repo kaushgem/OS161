@@ -18,6 +18,9 @@ int total_pages = 0;
 bool is_vm_bootstrapped = false;
 paddr_t coremap_base = 0;
 
+int as_get_permission(vaddr_t vadd);
+int validate_permission(int faulttype, vaddr_t faultaddr);
+paddr_t get_physical_address(int code_index);
 
 void vm_bootstrap(void){
 	paddr_t start, end, free_addr;
@@ -224,17 +227,6 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 
 	DEBUG(DB_VM, "dumbvm: fault: 0x%x\n", faultaddress);
 
-	switch (faulttype) {
-	    case VM_FAULT_READONLY:
-		/* We always create pages read-write, so we can't get this */
-		panic("dumbvm: got VM_FAULT_READONLY\n");
-	    case VM_FAULT_READ:
-	    case VM_FAULT_WRITE:
-		break;
-	    default:
-		return EINVAL;
-	}
-
 	as = curthread->t_addrspace;
 	if (as == NULL) {
 		/*
@@ -250,8 +242,6 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	KASSERT(as->as_npages1 != 0);
 	KASSERT(as->as_vbase2 != 0);
 	KASSERT(as->as_npages2 != 0);
-	KASSERT((as->as_vbase1 & PAGE_FRAME) == as->as_vbase1);
-	KASSERT((as->as_vbase2 & PAGE_FRAME) == as->as_vbase2);
 
 	vbase1 = as->as_vbase1;
 	vtop1 = vbase1 + as->as_npages1 * PAGE_SIZE;
@@ -260,24 +250,55 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	stackbase = USERSTACK - VM_STACKPAGES * PAGE_SIZE;
 	stacktop = USERSTACK;
 
+	int error = 0;
+
 	if (faultaddress >= vbase1 && faultaddress < vtop1) {
-
-
-		paddr = (faultaddress - vbase1) + as->as_pbase1;
+		error = validate_permission(faulttype, faultaddress);
 	}
 	else if (faultaddress >= vbase2 && faultaddress < vtop2) {
-
-
-		paddr = (faultaddress - vbase2) + as->as_pbase2;
+		error = validate_permission(faulttype, faultaddress);
 	}
 	else if (faultaddress >= stackbase && faultaddress < stacktop) {
-
-
-		paddr = (faultaddress - stackbase) + as->as_stackpbase;
+		error = validate_permission(faulttype, faultaddress);
+	}
+	else if (faultaddress >= as->hstart && faultaddress < as->hend) {
+		error = validate_permission(faulttype, faultaddress);
 	}
 	else {
 		return EFAULT;
 	}
+	if(error >0)
+	{
+		return error;
+	}
+
+	// page is in pte
+
+	struct page_table_entry *ptehead = as->pte;
+
+
+	while(ptehead!=NULL)
+	{
+		if(faultaddress >= ptehead->va && faultaddress <(ptehead->va+PAGE_SIZE))
+		{
+
+			paddr = (faultaddress - ptehead->va) + ptehead->pa;
+
+		}
+		ptehead = ptehead->next;
+	}
+
+
+
+
+	// page is not in pte;
+
+	paddr = alloc_userpage(as,faultaddress) ;
+	struct page_table_entry *newpte = kmalloc(sizeof(struct page_table_entry));
+	newpte->pa = paddr;
+	newpte->va = faultaddress;
+	newpte->next = NULL;
+	ptehead->next = newpte;
 
 	/* make sure it's page-aligned */
 	KASSERT((paddr & PAGE_FRAME) == paddr);
@@ -303,13 +324,59 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	return EFAULT;
 }
 
-int get_core_index(vaddr_t vaddr)
-{
-
-}
 
 paddr_t get_physical_address(int code_index)
 {
 	return coremap_base + code_index*PAGE_SIZE;
 
 }
+
+
+int validate_permission(int faulttype, vaddr_t faultaddr)
+{
+
+	int isReadable = faultaddr&1;
+	int isWriteable = faultaddr&2;
+
+
+	switch (faulttype)
+	{
+	case VM_FAULT_WRITE:
+	{
+		if(!isWriteable)
+		{
+			return EINVAL;
+		}
+		break;
+	}
+	case VM_FAULT_READ:
+	{
+		if(!isReadable)
+		{
+			return EINVAL;
+		}
+		break;
+	}
+
+	case VM_FAULT_READONLY:
+	{
+		if(!isWriteable)
+		{
+			return EINVAL;
+		}
+		break;
+	}
+
+	}
+	return 0;
+
+
+}
+
+int as_get_permission(vaddr_t vadd)
+{
+	int op = 0;
+	op=vadd&7;
+	return op;
+}
+
