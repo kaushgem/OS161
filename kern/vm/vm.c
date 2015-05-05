@@ -377,7 +377,7 @@ int validate_permission(int faulttype, int  permission)
 
 	int isReadable = permission&1;
 	int isWriteable = permission&2;
-	kprintf("\n Permssion %d isReadable %d iswritable %d ",permission,isReadable,isWriteable);
+	// kprintf("\n Permssion %d isReadable %d iswritable %d ",permission,isReadable,isWriteable);
 
 	switch (faulttype)
 	{
