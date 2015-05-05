@@ -282,12 +282,12 @@ int get_permissions_int(int r, int w, int x)
 		x=1;
 
 
-	kprintf("\n getting permission ints r: %d w :%d x :%d",r,w,x);
+	//kprintf("\n getting permission ints r: %d w :%d x :%d",r,w,x);
 
 	int op = 0;
 	op=r+(w<<w)+(x<<2*x);
 
-	kprintf("\n permission int : %d",op);
+	//kprintf("\n permission int : %d",op);
 	return op;
 }
 

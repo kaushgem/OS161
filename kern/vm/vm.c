@@ -261,17 +261,17 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 
 	int error = 0;
 
-	kprintf("\n***** vm fault ******");
-	kprintf("\n fault address: %d fault type: %d",faultaddress,faulttype);
-	kprintf("\nvbase 1: %d vtop 1: %d",vbase1,vtop1 );
-	kprintf("\nvbase 2: %d vtop 2: %d",vbase2,vtop2 );
-	kprintf("\nstackbase: %d stacktop: %d",vbase1,vtop1 );
-	kprintf("\nhstart: %d hend: %d",as->hstart,as->hend );
+	//kprintf("\n***** vm fault ******");
+	//kprintf("\n fault address: %d fault type: %d",faultaddress,faulttype);
+	//kprintf("\nvbase 1: %d vtop 1: %d",vbase1,vtop1 );
+	//kprintf("\nvbase 2: %d vtop 2: %d",vbase2,vtop2 );
+	//kprintf("\nstackbase: %d stacktop: %d",vbase1,vtop1 );
+	//kprintf("\nhstart: %d hend: %d",as->hstart,as->hend );
 
 	if (faultaddress >= vbase1 && faultaddress < vtop1) {
 
 		error = validate_permission(faulttype, vbase1perm);
-		kprintf("\n vbase 1 validated Error is %d",error);
+		//kprintf("\n vbase 1 validated Error is %d",error);
 	}
 	else if (faultaddress >= vbase2 && faultaddress < vtop2) {
 
@@ -293,7 +293,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		return error;
 	}
 
-	kprintf("\n validated permissons");
+	//kprintf("\n validated permissons");
 
 	// page is in pte
 
@@ -306,7 +306,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		if(faultaddress >= ptehead->va && faultaddress <(ptehead->va+PAGE_SIZE))
 		{
 
-			kprintf("\n page is in pte");
+			//kprintf("\n page is in pte");
 			paddr = (faultaddress - ptehead->va) + ptehead->pa;
 			ispageInPte = true;
 
@@ -316,15 +316,15 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 
 	if(!ispageInPte)
 	{
-		kprintf("\n page is not in pte");
+		//kprintf("\n page is not in pte");
 		paddr = alloc_userpage(as,faultaddress) ;
-		kprintf("\n user page allocated");
+		//kprintf("\n user page allocated");
 		struct page_table_entry *newpte = kmalloc(sizeof(struct page_table_entry));
-		kprintf("\n pte entry created");
+		//kprintf("\n pte entry created");
 		newpte->pa = paddr;
 		newpte->va = faultaddress;
 		newpte->next = NULL;
-		kprintf("\n pte entry initialised");
+		//kprintf("\n pte entry initialised");
 
 		if(ptehead==NULL)
 		{
@@ -334,10 +334,10 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		{
 			ptehead->next = newpte;
 		}
-		kprintf("\n pte entry assigned to table");
+		//kprintf("\n pte entry assigned to table");
 	}
 
-	kprintf("\n physical address successfully allocated: %d",paddr);
+	//kprintf("\n physical address successfully allocated: %d",paddr);
 
 	/* make sure it's page-aligned */
 	KASSERT((paddr & PAGE_FRAME) == paddr);
