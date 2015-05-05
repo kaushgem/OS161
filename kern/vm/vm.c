@@ -12,7 +12,7 @@
 
 static struct spinlock stealmem_lock = SPINLOCK_INITIALIZER;
 static struct spinlock coremap_lock = SPINLOCK_INITIALIZER;
-
+static int vm_faultcounter = 0;
 
 int total_pages = 0;
 bool is_vm_bootstrapped = false;
@@ -21,15 +21,22 @@ paddr_t coremap_base = 0;
 int as_get_permission(vaddr_t vadd);
 int validate_permission(int faulttype, int faultaddr);
 paddr_t get_physical_address(int code_index);
+int bp(void);
 
 void vm_bootstrap(void){
+
+
+
 	paddr_t start, end, free_addr;
 	ram_getsize(&start, &end);
+	total_pages = (end - start) / PAGE_SIZE;
 	//total_pages = ((end - start) - ((end -start)%4)) / PAGE_SIZE;
-	//total_pages = (end - start) / PAGE_SIZE;
-	total_pages = ROUNDUP(end, PAGE_SIZE) / PAGE_SIZE;
+	//total_pages = ROUNDUP(end, PAGE_SIZE) / PAGE_SIZE;
 	coremap = (struct coremap_entry*) PADDR_TO_KVADDR(start);
 	free_addr = start + total_pages * sizeof(struct coremap_entry);
+
+
+
 
 	kprintf("\n*****************************");
 	kprintf("\nstart %d end %d",start,end);
@@ -222,7 +229,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	uint32_t ehi, elo;
 	struct addrspace *as;
 	int spl;
-
+	vm_faultcounter+=1;
 	faultaddress &= PAGE_FRAME;
 
 	DEBUG(DB_VM, "dumbvm: fault: 0x%x\n", faultaddress);
@@ -258,15 +265,37 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	stackbase = USERSTACK - VM_STACKPAGES * PAGE_SIZE;
 	stacktop = USERSTACK;
 
+	KASSERT((faultaddress & PAGE_FRAME) ==faultaddress);
+
+/*
+	if(vm_faultcounter >100)
+	{
+		panic("\n more than 100 vm faults");
+	}
+
+
+	if(faultaddress == 4206592)
+	{
+		bp();
+		kprintf("\n fault address: %d fault type: %d",faultaddress,faulttype);
+		kprintf("\nvbase 1: %d vtop 1: %d",vbase1,vtop1 );
+		kprintf("\nvbase 2: %d vtop 2: %d",vbase2,vtop2 );
+		kprintf("\nstackbase: %u stacktop: %u",stackbase,stacktop );
+		kprintf("\nhstart: %d hend: %d",as->hstart,as->hend );
+	}
+*/
+
+
 
 	int error = 0;
 
-	//kprintf("\n***** vm fault ******");
-	//kprintf("\n fault address: %d fault type: %d",faultaddress,faulttype);
-	//kprintf("\nvbase 1: %d vtop 1: %d",vbase1,vtop1 );
-	//kprintf("\nvbase 2: %d vtop 2: %d",vbase2,vtop2 );
-	//kprintf("\nstackbase: %d stacktop: %d",vbase1,vtop1 );
-	//kprintf("\nhstart: %d hend: %d",as->hstart,as->hend );
+	// kprintf("\n***** vm fault ******");
+	// kprintf("\n fault address: %d fault type: %d",faultaddress,faulttype);
+	/*kprintf("\nvbase 1: %d vtop 1: %d",vbase1,vtop1 );
+	kprintf("\nvbase 2: %d vtop 2: %d",vbase2,vtop2 );
+	kprintf("\nstackbase: %d stacktop: %d",vbase1,vtop1 );
+	kprintf("\nhstart: %d hend: %d",as->hstart,as->hend );
+	*/
 
 	if (faultaddress >= vbase1 && faultaddress < vtop1) {
 
@@ -299,25 +328,28 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 
 	bool ispageInPte = false;
 	struct page_table_entry *ptehead = as->pte;
+	struct page_table_entry *prevpte = ptehead;
 
-
-	while(ptehead!=NULL)
+	while(ptehead!=NULL )
 	{
 		if(faultaddress >= ptehead->va && faultaddress <(ptehead->va+PAGE_SIZE))
 		{
 
 			//kprintf("\n page is in pte");
+			//panic("\n page is in pte");
 			paddr = (faultaddress - ptehead->va) + ptehead->pa;
 			ispageInPte = true;
+			break;
 
 		}
+		prevpte = ptehead;
 		ptehead = ptehead->next;
 	}
 
 	if(!ispageInPte)
 	{
 		//kprintf("\n page is not in pte");
-		paddr = alloc_userpage(as,faultaddress) ;
+		paddr = alloc_userpage(as,faultaddress);
 		//kprintf("\n user page allocated");
 		struct page_table_entry *newpte = kmalloc(sizeof(struct page_table_entry));
 		//kprintf("\n pte entry created");
@@ -326,13 +358,13 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		newpte->next = NULL;
 		//kprintf("\n pte entry initialised");
 
-		if(ptehead==NULL)
+		if(as->pte==NULL)
 		{
-			ptehead = newpte;
+			as->pte = newpte;
 		}
 		else
 		{
-			ptehead->next = newpte;
+			prevpte->next = newpte;
 		}
 		//kprintf("\n pte entry assigned to table");
 	}
@@ -353,6 +385,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		ehi = faultaddress;
 		elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
 		DEBUG(DB_VM, "dumbvm: 0x%x -> 0x%x\n", faultaddress, paddr);
+		// kprintf("\n TLB entry added %d %d", ehi,elo);
 		tlb_write(ehi, elo, i);
 		splx(spl);
 		return 0;
@@ -368,6 +401,11 @@ paddr_t get_physical_address(int code_index)
 {
 	return coremap_base + code_index*PAGE_SIZE;
 
+}
+
+int bp()
+{
+	return 0;
 }
 
 

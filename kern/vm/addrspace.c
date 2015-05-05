@@ -57,6 +57,8 @@ as_create(void)
 	 * Initialize as needed.
 	 */
 
+	as->pte = NULL;
+
 	as->as_vbase1 = 0;
 	as->as_npages1 = 0;
 	as->as_vbase2 = 0;
@@ -92,41 +94,51 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 
 
 	struct page_table_entry *oldpteHead = old->pte;
-	if (oldpteHead == NULL) return ENOMEM;
+	if (oldpteHead != NULL)
+	{
 
-	struct page_table_entry *newpteHead = kmalloc(sizeof(struct page_table_entry));
-	newpteHead->va = oldpteHead->va;
+		struct page_table_entry *newpteHead = kmalloc(sizeof(struct page_table_entry));
+		newpteHead->va = oldpteHead->va;
 
-	// call coremap to get the new virtual address after copy
-
-	newpteHead->pa = alloc_userpage(newas,oldpteHead->va);
-	memmove((void *)PADDR_TO_KVADDR(newpteHead->pa),
-			(const void *)PADDR_TO_KVADDR(oldpteHead->pa),
-			PAGE_SIZE);
+		// call coremap to get the new virtual address after copy
 
 
-	struct page_table_entry *newpte = newpteHead;
-	oldpteHead = oldpteHead->next;
+
+		newpteHead->pa = alloc_userpage(newas,oldpteHead->va);
+
+		//kprintf("\n copying from %u  to %u ", oldpteHead->va,2 );
+		memmove((void *)PADDR_TO_KVADDR(newpteHead->pa),
+				(const void *)PADDR_TO_KVADDR(oldpteHead->pa),
+				PAGE_SIZE);
 
 
-	while(oldpteHead != NULL) {
-		newpte->next = kmalloc(sizeof(struct page_table_entry));
-		newpte->va = oldpteHead->va;
-		// newpte->physical_addr =
 
-		newpte->pa = alloc_userpage(newas,oldpteHead->va);
+		struct page_table_entry *newpte = newpteHead;
+		oldpteHead = oldpteHead->next;
+
+
+		while(oldpteHead != NULL) {
+			newpte->next = kmalloc(sizeof(struct page_table_entry));
+			newpte->va = oldpteHead->va;
+			// newpte->physical_addr =
+
+			newpte->pa = alloc_userpage(newas,oldpteHead->va);
 			memmove((void *)PADDR_TO_KVADDR(newpte->pa),
 					(const void *)PADDR_TO_KVADDR(oldpteHead->pa),
 					PAGE_SIZE);
+			//kprintf("\n loop: copying from va %u  pa %u to pa %u ", oldpteHead->va,oldpteHead->pa, newpte->pa);
+			//panic("copying page table va: %d old pa: %d new pa: %d",newpte->va,oldpteHead->pa,newpte->pa );
 
 
-
-
-		newpte=newpte->next;
-		oldpteHead = oldpteHead->next;
+			newpte=newpte->next;
+			oldpteHead = oldpteHead->next;
+		}
+		newpte->next = NULL;
 	}
-	newpte->next = NULL;
-
+	else
+	{
+		kprintf("\n something wrong :-O");
+	}
 	// copy heap limits
 
 	newas->hend = old->hend;
