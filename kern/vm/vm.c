@@ -19,7 +19,7 @@ bool is_vm_bootstrapped = false;
 paddr_t coremap_base = 0;
 
 int as_get_permission(vaddr_t vadd);
-int validate_permission(int faulttype, vaddr_t faultaddr);
+int validate_permission(int faulttype, int faultaddr);
 paddr_t get_physical_address(int code_index);
 
 void vm_bootstrap(void){
@@ -244,25 +244,46 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	KASSERT(as->as_npages2 != 0);
 
 	vbase1 = as->as_vbase1;
-	vtop1 = vbase1 + as->as_npages1 * PAGE_SIZE;
+	int vbase1perm = vbase1&~PAGE_FRAME;
+	vbase1 = vbase1&PAGE_FRAME;
+
 	vbase2 = as->as_vbase2;
+	int vbase2perm = vbase2&~PAGE_FRAME;
+	vbase2 = vbase2&PAGE_FRAME;
+
+
+	vtop1 = vbase1 + as->as_npages1 * PAGE_SIZE;
 	vtop2 = vbase2 + as->as_npages2 * PAGE_SIZE;
+
 	stackbase = USERSTACK - VM_STACKPAGES * PAGE_SIZE;
 	stacktop = USERSTACK;
 
+
 	int error = 0;
 
+	kprintf("\n***** vm fault ******");
+	kprintf("\n fault address: %d fault type: %d",faultaddress,faulttype);
+	kprintf("\nvbase 1: %d vtop 1: %d",vbase1,vtop1 );
+	kprintf("\nvbase 2: %d vtop 2: %d",vbase2,vtop2 );
+	kprintf("\nstackbase: %d stacktop: %d",vbase1,vtop1 );
+	kprintf("\nhstart: %d hend: %d",as->hstart,as->hend );
+
 	if (faultaddress >= vbase1 && faultaddress < vtop1) {
-		error = validate_permission(faulttype, faultaddress);
+
+		error = validate_permission(faulttype, vbase1perm);
+		kprintf("\n vbase 1 validated Error is %d",error);
 	}
 	else if (faultaddress >= vbase2 && faultaddress < vtop2) {
-		error = validate_permission(faulttype, faultaddress);
+
+		error = validate_permission(faulttype, vbase2perm);
 	}
 	else if (faultaddress >= stackbase && faultaddress < stacktop) {
-		error = validate_permission(faulttype, faultaddress);
+
+		error = validate_permission(faulttype, 7);
 	}
 	else if (faultaddress >= as->hstart && faultaddress < as->hend) {
-		error = validate_permission(faulttype, faultaddress);
+
+		error = validate_permission(faulttype, 7);
 	}
 	else {
 		return EFAULT;
@@ -272,8 +293,11 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		return error;
 	}
 
+	kprintf("\n validated permissons");
+
 	// page is in pte
 
+	bool ispageInPte = false;
 	struct page_table_entry *ptehead = as->pte;
 
 
@@ -282,23 +306,38 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		if(faultaddress >= ptehead->va && faultaddress <(ptehead->va+PAGE_SIZE))
 		{
 
+			kprintf("\n page is in pte");
 			paddr = (faultaddress - ptehead->va) + ptehead->pa;
+			ispageInPte = true;
 
 		}
 		ptehead = ptehead->next;
 	}
 
+	if(!ispageInPte)
+	{
+		kprintf("\n page is not in pte");
+		paddr = alloc_userpage(as,faultaddress) ;
+		kprintf("\n user page allocated");
+		struct page_table_entry *newpte = kmalloc(sizeof(struct page_table_entry));
+		kprintf("\n pte entry created");
+		newpte->pa = paddr;
+		newpte->va = faultaddress;
+		newpte->next = NULL;
+		kprintf("\n pte entry initialised");
 
+		if(ptehead==NULL)
+		{
+			ptehead = newpte;
+		}
+		else
+		{
+			ptehead->next = newpte;
+		}
+		kprintf("\n pte entry assigned to table");
+	}
 
-
-	// page is not in pte;
-
-	paddr = alloc_userpage(as,faultaddress) ;
-	struct page_table_entry *newpte = kmalloc(sizeof(struct page_table_entry));
-	newpte->pa = paddr;
-	newpte->va = faultaddress;
-	newpte->next = NULL;
-	ptehead->next = newpte;
+	kprintf("\n physical address successfully allocated: %d",paddr);
 
 	/* make sure it's page-aligned */
 	KASSERT((paddr & PAGE_FRAME) == paddr);
@@ -332,12 +371,13 @@ paddr_t get_physical_address(int code_index)
 }
 
 
-int validate_permission(int faulttype, vaddr_t faultaddr)
+int validate_permission(int faulttype, int  permission)
 {
 
-	int isReadable = faultaddr&1;
-	int isWriteable = faultaddr&2;
 
+	int isReadable = permission&1;
+	int isWriteable = permission&2;
+	kprintf("\n Permssion %d isReadable %d iswritable %d ",permission,isReadable,isWriteable);
 
 	switch (faulttype)
 	{
@@ -349,14 +389,7 @@ int validate_permission(int faulttype, vaddr_t faultaddr)
 		}
 		break;
 	}
-	case VM_FAULT_READ:
-	{
-		if(!isReadable)
-		{
-			return EINVAL;
-		}
-		break;
-	}
+
 
 	case VM_FAULT_READONLY:
 	{

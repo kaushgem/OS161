@@ -38,8 +38,8 @@
  * assignment, this file is not compiled or linked or in any way
  * used. The cheesy hack versions in dumbvm.c are used instead.
  */
-vaddr_t as_reset_rw_permission(vaddr_t vadd);
-vaddr_t as_set_rw_permission(vaddr_t vadd);
+vaddr_t as_reset_rw_permission(vaddr_t *vadd);
+vaddr_t as_set_rw_permission(vaddr_t *vadd);
 
 int get_permissions_int(int r, int w, int x);
 
@@ -204,14 +204,14 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 
 
 	int permission = get_permissions_int( readable,  writeable,  executable);
-	vaddr = vaddr|permission;
+
 
 	if (as->as_vbase1 == 0) {
-		as->as_vbase1 = vaddr;
+		as->as_vbase1 = vaddr|permission;
 		as->as_npages1 = npages;
 
 	}else if (as->as_vbase2 == 0) {
-		as->as_vbase2 = vaddr;
+		as->as_vbase2 = vaddr|permission;
 		as->as_npages2 = npages;
 	}
 
@@ -230,8 +230,8 @@ as_prepare_load(struct addrspace *as)
 	 * Write this.
 	 */
 
-	as_set_rw_permission(as->as_vbase1);
-	as_set_rw_permission(as->as_vbase2);
+	as_set_rw_permission(&as->as_vbase1);
+	as_set_rw_permission(&as->as_vbase2);
 
 
 
@@ -249,8 +249,8 @@ as_complete_load(struct addrspace *as)
 	 * Write this.
 	 */
 
-	as_reset_rw_permission(as->as_vbase1);
-	as_reset_rw_permission(as->as_vbase2);
+	as_reset_rw_permission(&as->as_vbase1);
+	as_reset_rw_permission(&as->as_vbase2);
 
 	(void)as;
 	return 0;
@@ -273,29 +273,43 @@ as_define_stack(struct addrspace *as, vaddr_t *stackptr)
 
 int get_permissions_int(int r, int w, int x)
 {
+
+	if(r>0)
+		r=1;
+	if(w>0)
+		w=1;
+	if(x >0)
+		x=1;
+
+
+	kprintf("\n getting permission ints r: %d w :%d x :%d",r,w,x);
+
 	int op = 0;
 	op=r+(w<<w)+(x<<2*x);
+
+	kprintf("\n permission int : %d",op);
 	return op;
 }
 
 
-vaddr_t as_set_rw_permission(vaddr_t vadd)
+vaddr_t as_set_rw_permission(vaddr_t *vadd)
 {
-	int l3=vadd&7;
+
+	int l3=(*vadd)&7;
 	int  b3=7;
 	int  lb=(l3<<3)|b3;
-	vadd = vadd|lb;
-	return vadd;
+	*vadd = (*vadd)|lb;
+	return *vadd;
 
 }
 
-vaddr_t as_reset_rw_permission(vaddr_t vadd)
+vaddr_t as_reset_rw_permission(vaddr_t *vadd)
 {
-	int lb3=vadd&0x3F;
+	int lb3=(*vadd)&0x3F;
 	lb3 = lb3>>3;
-	vadd = vadd&~0x3F;
-	vadd=vadd|lb3;
-	return vadd;
+	*vadd = (*vadd)&~0x3F;
+	*vadd=(*vadd)|lb3;
+	return *vadd;
 
 }
 
