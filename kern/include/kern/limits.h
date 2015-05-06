@@ -66,7 +66,7 @@
 #define __PID_MIN       2
 
 /* Max value for a process ID */
-#define __PID_MAX       32767
+#define __PID_MAX       256
 
 /* Max bytes for atomic pipe I/O -- see description in the pipe() man page */
 #define __PIPE_BUF      512
