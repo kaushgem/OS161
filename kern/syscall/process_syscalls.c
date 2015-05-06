@@ -400,13 +400,22 @@ execv(const char *prog_name, char **argv)
 	return EINVAL;
 }
 
-void *
+vaddr_t
 sbrk(intptr_t amount, int *error){
-	//struct addrspace *as = curthread->t_addrspace;
 
-	(void)amount;
-	(void)error;
+	struct addrspace *as = curthread->t_addrspace;
+	vaddr_t prev_hend = as->hend;
 
-	return NULL;
+	if((as->hend + amount) < as->hstart){
+		*error = EINVAL;
+		return -1;
+	}else if((as->hend + amount) > as->as_stackvbase){
+		*error = ENOMEM;
+		return -1;
+	}
+
+	as->hend = as->hend + amount;
+
+	return prev_hend;
 }
 

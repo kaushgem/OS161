@@ -38,10 +38,12 @@
  * assignment, this file is not compiled or linked or in any way
  * used. The cheesy hack versions in dumbvm.c are used instead.
  */
+
 vaddr_t as_reset_rw_permission(vaddr_t *vadd);
 vaddr_t as_set_rw_permission(vaddr_t *vadd);
 
 int get_permissions_int(int r, int w, int x);
+
 
 struct addrspace *
 as_create(void)
@@ -69,66 +71,45 @@ as_create(void)
 	return as;
 }
 
+
 int
 as_copy(struct addrspace *old, struct addrspace **ret)
 {
-	struct addrspace *newas;
+	struct addrspace *new_as;
 
-	newas = as_create();
-	if (newas==NULL) {
+	new_as = as_create();
+	if (new_as==NULL) {
 		return ENOMEM;
 	}
 
-	/*
-	 * Write this.
-	 */
-
 	// copy regions
-	newas->as_vbase1 = old->as_vbase1;
-	newas->as_npages1 = old->as_npages1;
-	newas->as_vbase2 = old->as_vbase2;
-	newas->as_npages2 = old->as_npages2;
-
+	new_as->as_vbase1 = old->as_vbase1;
+	new_as->as_npages1 = old->as_npages1;
+	new_as->as_vbase2 = old->as_vbase2;
+	new_as->as_npages2 = old->as_npages2;
 
 	// copy page table entries
-
-
 	struct page_table_entry *oldpteHead = old->pte;
 	if (oldpteHead != NULL)
 	{
-
 		struct page_table_entry *newpteHead = kmalloc(sizeof(struct page_table_entry));
 		newpteHead->va = oldpteHead->va;
-
-		// call coremap to get the new virtual address after copy
-
-
-
-		newpteHead->pa = alloc_userpage(newas,oldpteHead->va);
-
-		//kprintf("\n copying from %u  to %u ", oldpteHead->va,2 );
+		newpteHead->pa = alloc_userpage(new_as,oldpteHead->va);
 		memmove((void *)PADDR_TO_KVADDR(newpteHead->pa),
 				(const void *)PADDR_TO_KVADDR(oldpteHead->pa),
 				PAGE_SIZE);
 
-
-
 		struct page_table_entry *newpte = newpteHead;
 		oldpteHead = oldpteHead->next;
 
-
-		while(oldpteHead != NULL) {
+		while(oldpteHead != NULL)
+		{
 			newpte->next = kmalloc(sizeof(struct page_table_entry));
 			newpte->va = oldpteHead->va;
-			// newpte->physical_addr =
-
-			newpte->pa = alloc_userpage(newas,oldpteHead->va);
+			newpte->pa = alloc_userpage(new_as,oldpteHead->va);
 			memmove((void *)PADDR_TO_KVADDR(newpte->pa),
 					(const void *)PADDR_TO_KVADDR(oldpteHead->pa),
 					PAGE_SIZE);
-			//kprintf("\n loop: copying from va %u  pa %u to pa %u ", oldpteHead->va,oldpteHead->pa, newpte->pa);
-			//panic("copying page table va: %d old pa: %d new pa: %d",newpte->va,oldpteHead->pa,newpte->pa );
-
 
 			newpte=newpte->next;
 			oldpteHead = oldpteHead->next;
@@ -137,22 +118,17 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 	}
 	else
 	{
-		kprintf("\n something wrong :-O");
+		//kprintf("\n something wrong :-O");
 	}
 	// copy heap limits
 
-	newas->hend = old->hend;
-	newas->hstart = old->hstart;
+	new_as->hend = old->hend;
+	new_as->hstart = old->hstart;
 
-
-
-
-
-	(void)old;
-
-	*ret = newas;
+	*ret = new_as;
 	return 0;
 }
+
 
 void
 as_destroy(struct addrspace *as)
@@ -160,7 +136,6 @@ as_destroy(struct addrspace *as)
 	/*
 	 * Clean up as needed.
 	 */
-
 
 	struct page_table_entry *pte = as->pte;
 	while(pte!=NULL)
@@ -173,6 +148,7 @@ as_destroy(struct addrspace *as)
 	kfree(as);
 }
 
+
 void
 as_activate(struct addrspace *as)
 {
@@ -182,6 +158,7 @@ as_activate(struct addrspace *as)
 	vm_tlbshootdown_all();
 	(void)as;  // suppress warning until code gets written
 }
+
 
 /*
  * Set up a segment at virtual address VADDR of size MEMSIZE. The
@@ -213,15 +190,11 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 
 	npages = sz / PAGE_SIZE;
 
-
-
 	int permission = get_permissions_int( readable,  writeable,  executable);
-
 
 	if (as->as_vbase1 == 0) {
 		as->as_vbase1 = vaddr|permission;
 		as->as_npages1 = npages;
-
 	}else if (as->as_vbase2 == 0) {
 		as->as_vbase2 = vaddr|permission;
 		as->as_npages2 = npages;
@@ -235,6 +208,7 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 	return 0;
 }
 
+
 int
 as_prepare_load(struct addrspace *as)
 {
@@ -245,14 +219,10 @@ as_prepare_load(struct addrspace *as)
 	as_set_rw_permission(&as->as_vbase1);
 	as_set_rw_permission(&as->as_vbase2);
 
-
-
-
-
-
 	(void)as;
 	return 0;
 }
+
 
 int
 as_complete_load(struct addrspace *as)
@@ -267,6 +237,7 @@ as_complete_load(struct addrspace *as)
 	(void)as;
 	return 0;
 }
+
 
 int
 as_define_stack(struct addrspace *as, vaddr_t *stackptr)
@@ -283,37 +254,34 @@ as_define_stack(struct addrspace *as, vaddr_t *stackptr)
 	return 0;
 }
 
+
 int get_permissions_int(int r, int w, int x)
 {
-
 	if(r>0)
 		r=1;
 	if(w>0)
 		w=1;
 	if(x >0)
 		x=1;
-
-
 	//kprintf("\n getting permission ints r: %d w :%d x :%d",r,w,x);
-
 	int op = 0;
 	op=r+(w<<w)+(x<<2*x);
-
 	//kprintf("\n permission int : %d",op);
+
 	return op;
 }
 
 
 vaddr_t as_set_rw_permission(vaddr_t *vadd)
 {
-
 	int l3=(*vadd)&7;
 	int  b3=7;
 	int  lb=(l3<<3)|b3;
 	*vadd = (*vadd)|lb;
-	return *vadd;
 
+	return *vadd;
 }
+
 
 vaddr_t as_reset_rw_permission(vaddr_t *vadd)
 {
@@ -321,8 +289,8 @@ vaddr_t as_reset_rw_permission(vaddr_t *vadd)
 	lb3 = lb3>>3;
 	*vadd = (*vadd)&~0x3F;
 	*vadd=(*vadd)|lb3;
-	return *vadd;
 
+	return *vadd;
 }
 
 

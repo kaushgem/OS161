@@ -51,6 +51,6 @@ void _exit(int exitcode);
 pid_t fork(struct  trapframe* , int *error);
 int execv(const char *program, char **args);
 
-void * sbrk(intptr_t amount, int* error);
+vaddr_t sbrk(intptr_t amount, int* error);
 
 #endif /* PROCESS_SYSCALLS_H_ */

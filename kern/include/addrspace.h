@@ -40,7 +40,6 @@
 
 struct vnode;
 
-
 /* 
  * Address space - data structure associated with the virtual memory
  * space of a process.

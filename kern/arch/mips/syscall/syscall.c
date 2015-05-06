@@ -178,7 +178,7 @@ syscall(struct trapframe *tf)
 	    //--------------------------------------------------
 
 	    case SYS_sbrk:
-	    	//retval = sbrk(tf->tf_a0, error);
+	    	retval = sbrk(tf->tf_a0, error);
 	    	break;
 
 	    //--------------------------------------------------

@@ -25,28 +25,20 @@ int bp(void);
 
 void vm_bootstrap(void){
 
-
-
 	paddr_t start, end, free_addr;
 	ram_getsize(&start, &end);
 	total_pages = (end - start) / PAGE_SIZE;
-	//total_pages = ((end - start) - ((end -start)%4)) / PAGE_SIZE;
 	//total_pages = ROUNDUP(end, PAGE_SIZE) / PAGE_SIZE;
 	coremap = (struct coremap_entry*) PADDR_TO_KVADDR(start);
 	free_addr = start + total_pages * sizeof(struct coremap_entry);
 
-
-
-
-	kprintf("\n*****************************");
-	kprintf("\nstart %d end %d",start,end);
-	kprintf("\nfree %d totpages %d pagesize %d",free_addr,total_pages, PAGE_SIZE);
-	kprintf("\nround %d\n",ROUNDUP(end, PAGE_SIZE));
+	kprintf("\n************RAM Address*****************");
+	kprintf("\nStart:%d End:%d End(ROUNDUP):%d",start,end,ROUNDUP(end, PAGE_SIZE));
+	kprintf("\nFree:%d TotalPages:%d\n\n",free_addr,total_pages);
 
 	coremap_base = start;
 	paddr_t addr;
 
-	//for(i=0, addr = start; i < total_pages; i++, addr+=PAGE_SIZE){
 	for(int i=0; i< total_pages ; i++){
 		coremap[i].vaddr = 0;
 		coremap[i].as = NULL;
@@ -57,7 +49,6 @@ void vm_bootstrap(void){
 			coremap[i].state = FIXED;
 		else
 			coremap[i].state = FREE;
-
 	}
 
 	is_vm_bootstrapped = true;
@@ -202,9 +193,8 @@ void free_userpage(vaddr_t vaddr){
 void vm_tlbshootdown_all(void){
 	int i, spl;
 	spl = splhigh();
-	for (i=0; i<NUM_TLB; i++) {
+	for (i=0; i<NUM_TLB; i++)
 		tlb_write(TLBHI_INVALID(i), TLBLO_INVALID(), i);
-	}
 	splx(spl);
 }
 
@@ -213,9 +203,8 @@ void vm_tlbshootdown(const struct tlbshootdown * tlb){
 	(void)tlb;
 	int i, spl;
 	spl = splhigh();
-	for (i=0; i<NUM_TLB; i++) {
+	for (i=0; i<NUM_TLB; i++)
 		tlb_write(TLBHI_INVALID(i), TLBLO_INVALID(), i);
-	}
 	splx(spl);
 }
 
@@ -258,7 +247,6 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	int vbase2perm = vbase2&~PAGE_FRAME;
 	vbase2 = vbase2&PAGE_FRAME;
 
-
 	vtop1 = vbase1 + as->as_npages1 * PAGE_SIZE;
 	vtop2 = vbase2 + as->as_npages2 * PAGE_SIZE;
 
@@ -267,15 +255,11 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 
 	KASSERT((faultaddress & PAGE_FRAME) ==faultaddress);
 
-/*
-	if(vm_faultcounter >100)
-	{
+	/*
+	if(vm_faultcounter >100){
 		panic("\n more than 100 vm faults");
 	}
-
-
-	if(faultaddress == 4206592)
-	{
+	if(faultaddress == 4206592){
 		bp();
 		kprintf("\n fault address: %d fault type: %d",faultaddress,faulttype);
 		kprintf("\nvbase 1: %d vtop 1: %d",vbase1,vtop1 );
@@ -283,71 +267,56 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		kprintf("\nstackbase: %u stacktop: %u",stackbase,stacktop );
 		kprintf("\nhstart: %d hend: %d",as->hstart,as->hend );
 	}
-*/
-
-
-
+	 */
 	int error = 0;
-
 	// kprintf("\n***** vm fault ******");
 	// kprintf("\n fault address: %d fault type: %d",faultaddress,faulttype);
 	/*kprintf("\nvbase 1: %d vtop 1: %d",vbase1,vtop1 );
 	kprintf("\nvbase 2: %d vtop 2: %d",vbase2,vtop2 );
 	kprintf("\nstackbase: %d stacktop: %d",vbase1,vtop1 );
 	kprintf("\nhstart: %d hend: %d",as->hstart,as->hend );
-	*/
+	 */
 
 	if (faultaddress >= vbase1 && faultaddress < vtop1) {
-
 		error = validate_permission(faulttype, vbase1perm);
 		//kprintf("\n vbase 1 validated Error is %d",error);
-	}
-	else if (faultaddress >= vbase2 && faultaddress < vtop2) {
+	}else if (faultaddress >= vbase2 && faultaddress < vtop2) {
 
 		error = validate_permission(faulttype, vbase2perm);
-	}
-	else if (faultaddress >= stackbase && faultaddress < stacktop) {
+	}else if (faultaddress >= stackbase && faultaddress < stacktop) {
 
 		error = validate_permission(faulttype, 7);
-	}
-	else if (faultaddress >= as->hstart && faultaddress < as->hend) {
+	}else if (faultaddress >= as->hstart && faultaddress < as->hend) {
 
 		error = validate_permission(faulttype, 7);
-	}
-	else {
+	}else {
 		return EFAULT;
 	}
-	if(error >0)
-	{
+
+	if(error >0){
 		return error;
 	}
 
 	//kprintf("\n validated permissons");
 
 	// page is in pte
-
 	bool ispageInPte = false;
 	struct page_table_entry *ptehead = as->pte;
 	struct page_table_entry *prevpte = ptehead;
 
-	while(ptehead!=NULL )
-	{
-		if(faultaddress >= ptehead->va && faultaddress <(ptehead->va+PAGE_SIZE))
-		{
-
+	while(ptehead!=NULL ){
+		if(faultaddress >= ptehead->va && faultaddress <(ptehead->va+PAGE_SIZE)){
 			//kprintf("\n page is in pte");
 			//panic("\n page is in pte");
 			paddr = (faultaddress - ptehead->va) + ptehead->pa;
 			ispageInPte = true;
 			break;
-
 		}
 		prevpte = ptehead;
 		ptehead = ptehead->next;
 	}
 
-	if(!ispageInPte)
-	{
+	if(!ispageInPte){
 		//kprintf("\n page is not in pte");
 		paddr = alloc_userpage(as,faultaddress);
 		//kprintf("\n user page allocated");
@@ -358,12 +327,9 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		newpte->next = NULL;
 		//kprintf("\n pte entry initialised");
 
-		if(as->pte==NULL)
-		{
+		if(as->pte==NULL){
 			as->pte = newpte;
-		}
-		else
-		{
+		}else{
 			prevpte->next = newpte;
 		}
 		//kprintf("\n pte entry assigned to table");
@@ -377,7 +343,8 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	/* Disable interrupts on this CPU while frobbing the TLB. */
 	spl = splhigh();
 
-	for (i=0; i<NUM_TLB; i++) {
+	for (i=0; i<NUM_TLB; i++)
+	{
 		tlb_read(&ehi, &elo, i);
 		if (elo & TLBLO_VALID) {
 			continue;
@@ -391,7 +358,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		return 0;
 	}
 
-	kprintf("dumbvm: Ran out of TLB entries - cannot handle page fault\n");
+	//kprintf("dumbvm: Ran out of TLB entries - cannot handle page fault\n");
 	splx(spl);
 	return EFAULT;
 }
@@ -400,7 +367,6 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 paddr_t get_physical_address(int code_index)
 {
 	return coremap_base + code_index*PAGE_SIZE;
-
 }
 
 int bp()
@@ -411,8 +377,6 @@ int bp()
 
 int validate_permission(int faulttype, int  permission)
 {
-
-
 	//int isReadable = permission&1;
 	int isWriteable = permission&2;
 	// kprintf("\n Permssion %d isReadable %d iswritable %d ",permission,isReadable,isWriteable);
@@ -420,28 +384,15 @@ int validate_permission(int faulttype, int  permission)
 	switch (faulttype)
 	{
 	case VM_FAULT_WRITE:
-	{
 		if(!isWriteable)
-		{
 			return EINVAL;
-		}
 		break;
-	}
-
-
 	case VM_FAULT_READONLY:
-	{
 		if(!isWriteable)
-		{
 			return EINVAL;
-		}
 		break;
-	}
-
 	}
 	return 0;
-
-
 }
 
 int as_get_permission(vaddr_t vadd)
