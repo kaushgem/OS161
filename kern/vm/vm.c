@@ -253,7 +253,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	stackbase = USERSTACK - VM_STACKPAGES * PAGE_SIZE;
 	stacktop = USERSTACK;
 
-	KASSERT((faultaddress & PAGE_FRAME) ==faultaddress);
+	//KASSERT((faultaddress & PAGE_FRAME) ==faultaddress);
 
 	/*
 	if(vm_faultcounter >100){
@@ -338,7 +338,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	//kprintf("\n physical address successfully allocated: %d",paddr);
 
 	/* make sure it's page-aligned */
-	KASSERT((paddr & PAGE_FRAME) == paddr);
+	//KASSERT((paddr & PAGE_FRAME) == paddr);
 
 	/* Disable interrupts on this CPU while frobbing the TLB. */
 	spl = splhigh();
