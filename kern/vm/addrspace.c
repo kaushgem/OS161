@@ -220,6 +220,8 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 		as->hend = as->hstart;
 	}
 
+	as->as_stackvbase = USERSTACK -(VM_STACKPAGES)*12;
+
 
 	return 0;
 }
