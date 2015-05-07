@@ -40,15 +40,19 @@ void vm_bootstrap(void){
 	paddr_t addr;
 
 	for(int i=0; i< total_pages ; i++){
-		coremap[i].vaddr = 0;
-		coremap[i].as = NULL;
-		coremap[i].npages = 0;
-
 		addr = coremap_base + i * PAGE_SIZE;
-		if(addr < free_addr)
+
+		coremap[i].as = NULL;
+		coremap[i].npages = 1;
+
+		if(addr < free_addr){
+			coremap[i].vaddr = PADDR_TO_KVADDR(addr);
 			coremap[i].state = FIXED;
-		else
+		}
+		else{
+			coremap[i].vaddr = 0;
 			coremap[i].state = FREE;
+		}
 	}
 
 	is_vm_bootstrapped = true;
@@ -255,19 +259,11 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 
 	//KASSERT((faultaddress & PAGE_FRAME) ==faultaddress);
 
-	/*
-	if(vm_faultcounter >100){
-		panic("\n more than 100 vm faults");
-	}
-	if(faultaddress == 4206592){
+
+	if(faultaddress == 0x403000){
 		bp();
-		kprintf("\n fault address: %d fault type: %d",faultaddress,faulttype);
-		kprintf("\nvbase 1: %d vtop 1: %d",vbase1,vtop1 );
-		kprintf("\nvbase 2: %d vtop 2: %d",vbase2,vtop2 );
-		kprintf("\nstackbase: %u stacktop: %u",stackbase,stacktop );
-		kprintf("\nhstart: %d hend: %d",as->hstart,as->hend );
 	}
-	 */
+
 	int error = 0;
 	// kprintf("\n***** vm fault ******");
 	// kprintf("\n fault address: %d fault type: %d",faultaddress,faulttype);
@@ -338,7 +334,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	//kprintf("\n physical address successfully allocated: %d",paddr);
 
 	/* make sure it's page-aligned */
-	//KASSERT((paddr & PAGE_FRAME) == paddr);
+	KASSERT((paddr & PAGE_FRAME) == paddr);
 
 	/* Disable interrupts on this CPU while frobbing the TLB. */
 	spl = splhigh();
