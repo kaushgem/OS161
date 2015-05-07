@@ -229,7 +229,7 @@ as_prepare_load(struct addrspace *as)
 	as_set_rw_permission(&as->as_vbase1);
 	as_set_rw_permission(&as->as_vbase2);
 
-	vaddr_t vaddr = as->as_vbase1&~PAGE_FRAME;
+	vaddr_t vaddr = as->as_vbase1 & PAGE_FRAME;
 	int npages = as->as_npages1;
 
 	struct page_table_entry *pte_head = as->pte;
@@ -242,8 +242,6 @@ as_prepare_load(struct addrspace *as)
 
 	vaddr_t vaddr_page=0;
 	paddr_t paddr=0;
-
-	b();
 
 	for(int i=0;i<(int)npages;i++){
 		vaddr_page = vaddr + i * PAGE_SIZE;
@@ -263,7 +261,7 @@ as_prepare_load(struct addrspace *as)
 		ch++;
 	}
 
-	vaddr = as->as_vbase2&~PAGE_FRAME;
+	vaddr = as->as_vbase2 & PAGE_FRAME;
 	npages = as->as_npages2;
 
 	pte_head = as->pte;
@@ -276,8 +274,6 @@ as_prepare_load(struct addrspace *as)
 
 	vaddr_page=0;
 	paddr=0;
-
-	b();
 
 	for(int i=0;i<(int)npages;i++){
 		vaddr_page = vaddr + i * PAGE_SIZE;

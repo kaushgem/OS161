@@ -174,27 +174,32 @@ paddr_t alloc_userpage(struct addrspace *as, vaddr_t vaddr){
 
 void free_userpage(vaddr_t vaddr){
 
+	bool isFreed = false;
+
 	spinlock_acquire(&coremap_lock);
 
 	int i;
 	for(i=0 ; i<total_pages ; i++){
 		if(vaddr == coremap[i].vaddr){
 			if(coremap[i].state == FIXED){
-				kprintf("\n Err** Cannot free, It's a kernel page\n");
+				kprintf("\n Err** Cannot free (%d), It's a kernel page\n",vaddr);
+				spinlock_release(&coremap_lock);
 				return;
 			}else{
 				coremap[i].vaddr = 0;
 				coremap[i].as = NULL;
 				coremap[i].npages = 0;
 				coremap[i].state = FREE;
+				isFreed = true;
+				//kprintf("\n Great** Virtual (%d) freeeeed\n",vaddr);
+				break;
 			}
-		}else{
-			kprintf("\n Err** Virtual Page number not found\n");
-			return;
 		}
 	}
 
 	spinlock_release(&coremap_lock);
+	if(!isFreed)
+		kprintf("\n Err** Virtual (%d) not found\n",vaddr);
 }
 
 
