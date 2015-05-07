@@ -208,6 +208,28 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 		as->hend = as->hstart;
 	}
 
+
+	return 0;
+}
+
+int b()
+{
+	return 0;
+}
+
+int
+as_prepare_load(struct addrspace *as)
+{
+	/*
+	 * Write this.
+	 */
+
+	as_set_rw_permission(&as->as_vbase1);
+	as_set_rw_permission(&as->as_vbase2);
+
+	vaddr_t vaddr = as->as_vbase1&~PAGE_FRAME;
+	int npages = as->as_npages1;
+
 	struct page_table_entry *pte_head = as->pte;
 	struct page_table_entry *pte_end = pte_head;
 
@@ -239,23 +261,41 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 		ch++;
 	}
 
-	return 0;
-}
+	vaddr = as->as_vbase2&~PAGE_FRAME;
+	npages = as->as_npages2;
 
-int b()
-{
-	return 0;
-}
+	pte_head = as->pte;
+	pte_end = pte_head;
 
-int
-as_prepare_load(struct addrspace *as)
-{
-	/*
-	 * Write this.
-	 */
+	while(pte_head!=NULL ){
+		pte_end = pte_head;
+		pte_head = pte_head->next;
+	}
 
-	as_set_rw_permission(&as->as_vbase1);
-	as_set_rw_permission(&as->as_vbase2);
+	vaddr_page=0;
+	paddr=0;
+
+	b();
+
+	for(int i=0;i<(int)npages;i++){
+		vaddr_page = vaddr + i * PAGE_SIZE;
+		paddr = alloc_userpage(as,vaddr_page);
+		struct page_table_entry *newpte = kmalloc(sizeof(struct page_table_entry));
+		newpte->pa = paddr;
+		newpte->va = vaddr_page;
+		newpte->next = NULL;
+
+		if(as->pte == NULL){
+			as->pte = newpte;
+			pte_end = newpte;
+		}else{
+			pte_end->next = newpte;
+			pte_end = newpte;
+		}
+		ch++;
+	}
+
+
 
 	(void)as;
 	return 0;
