@@ -44,6 +44,7 @@ vaddr_t as_set_rw_permission(vaddr_t *vadd);
 
 int get_permissions_int(int r, int w, int x);
 int b(void);
+int ch=0;
 
 struct addrspace *
 as_create(void)
@@ -196,6 +197,7 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 	if (as->as_vbase1 == 0) {
 		as->as_vbase1 = vaddr|permission;
 		as->as_npages1 = npages;
+
 	}else if (as->as_vbase2 == 0) {
 		as->as_vbase2 = vaddr|permission;
 		as->as_npages2 = npages;
@@ -234,6 +236,7 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 			pte_end->next = newpte;
 			pte_end = newpte;
 		}
+		ch++;
 	}
 
 	return 0;

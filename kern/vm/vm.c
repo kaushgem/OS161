@@ -42,15 +42,16 @@ void vm_bootstrap(void){
 	for(int i=0; i< total_pages ; i++){
 		addr = coremap_base + i * PAGE_SIZE;
 
-		coremap[i].vaddr = 0;
+
 		coremap[i].as = NULL;
-		coremap[i].npages = 0;
+		coremap[i].npages = 1;
 
 		if(addr < free_addr){
+			coremap[i].vaddr = PADDR_TO_KVADDR(addr);
 			coremap[i].state = FIXED;
 		}
 		else{
-
+			coremap[i].vaddr = 0;
 			coremap[i].state = FREE;
 		}
 	}
@@ -111,6 +112,7 @@ paddr_t getppages_vm(int npages){
 			coremap[i].vaddr = PADDR_TO_KVADDR(addr);
 			coremap[i].npages = npages;
 			for(int k=0; k<npages ; k++){
+				bzero((void *)PADDR_TO_KVADDR(addr), PAGE_SIZE);
 				coremap[i++].state = FIXED;
 			}
 
@@ -159,6 +161,8 @@ paddr_t alloc_userpage(struct addrspace *as, vaddr_t vaddr){
 			coremap[i].as = as;
 			coremap[i].npages = 1;
 			coremap[i].state = DIRTY;
+			bzero((void *)PADDR_TO_KVADDR(addr),PAGE_SIZE);
+
 			break;
 		}
 	}
@@ -321,6 +325,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		newpte->pa = paddr;
 		newpte->va = faultaddress;
 		newpte->next = NULL;
+
 		//kprintf("\n pte entry initialised");
 
 		if(as->pte==NULL){
@@ -334,7 +339,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	//kprintf("\n physical address successfully allocated: %d",paddr);
 
 	/* make sure it's page-aligned */
-	KASSERT((paddr & PAGE_FRAME) == paddr);
+	// KASSERT((paddr & PAGE_FRAME) == paddr);
 
 	/* Disable interrupts on this CPU while frobbing the TLB. */
 	spl = splhigh();
