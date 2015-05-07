@@ -142,6 +142,8 @@ as_destroy(struct addrspace *as)
 	while(pte!=NULL)
 	{
 		struct page_table_entry *next = pte->next;
+
+		free_userpage(pte->va);
 		kfree(pte);
 		pte = next;
 	}
