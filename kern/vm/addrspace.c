@@ -43,7 +43,7 @@ vaddr_t as_reset_rw_permission(vaddr_t *vadd);
 vaddr_t as_set_rw_permission(vaddr_t *vadd);
 
 int get_permissions_int(int r, int w, int x);
-
+int b(void);
 
 struct addrspace *
 as_create(void)
@@ -171,6 +171,7 @@ as_activate(struct addrspace *as)
  * want to implement them.
  */
 
+
 int
 as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 		int readable, int writeable, int executable)
@@ -216,7 +217,9 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 	vaddr_t vaddr_page=0;
 	paddr_t paddr=0;
 
-	for(int i=0;i<npages;i++){
+	b();
+
+	for(int i=0;i<(int)npages;i++){
 		vaddr_page = vaddr + i * PAGE_SIZE;
 		paddr = alloc_userpage(as,vaddr_page);
 		struct page_table_entry *newpte = kmalloc(sizeof(struct page_table_entry));
@@ -224,13 +227,22 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 		newpte->va = vaddr_page;
 		newpte->next = NULL;
 
-		pte_end->next = newpte;
-		pte_end = newpte;
+		if(as->pte == NULL){
+			as->pte = newpte;
+			pte_end = newpte;
+		}else{
+			pte_end->next = newpte;
+			pte_end = newpte;
+		}
 	}
 
 	return 0;
 }
 
+int b()
+{
+	return 0;
+}
 
 int
 as_prepare_load(struct addrspace *as)
