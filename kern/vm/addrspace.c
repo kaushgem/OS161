@@ -205,6 +205,29 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 		as->hend = as->hstart;
 	}
 
+	struct page_table_entry *pte_head = as->pte;
+	struct page_table_entry *pte_end = pte_head;
+
+	while(pte_head!=NULL ){
+		pte_end = pte_head;
+		pte_head = pte_head->next;
+	}
+
+	vaddr_t vaddr_page=0;
+	paddr_t paddr=0;
+
+	for(int i=0;i<npages;i++){
+		vaddr_page = vaddr + i * PAGE_SIZE;
+		paddr = alloc_userpage(as,vaddr_page);
+		struct page_table_entry *newpte = kmalloc(sizeof(struct page_table_entry));
+		newpte->pa = paddr;
+		newpte->va = vaddr_page;
+		newpte->next = NULL;
+
+		pte_end->next = newpte;
+		pte_end = newpte;
+	}
+
 	return 0;
 }
 
