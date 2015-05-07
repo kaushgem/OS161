@@ -100,22 +100,30 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 				(const void *)PADDR_TO_KVADDR(oldpteHead->pa),
 				PAGE_SIZE);
 
-		struct page_table_entry *newpte = newpteHead;
 		oldpteHead = oldpteHead->next;
 
 		while(oldpteHead != NULL)
 		{
-			newpte->next = kmalloc(sizeof(struct page_table_entry));
+			struct page_table_entry *newpte = kmalloc(sizeof(struct page_table_entry));
 			newpte->va = oldpteHead->va;
 			newpte->pa = alloc_userpage(new_as,oldpteHead->va);
 			memmove((void *)PADDR_TO_KVADDR(newpte->pa),
 					(const void *)PADDR_TO_KVADDR(oldpteHead->pa),
 					PAGE_SIZE);
+			newpte->next=NULL;
 
-			newpte=newpte->next;
+			/*newpte->next = kmalloc(sizeof(struct page_table_entry));
+			newpte->next->va = oldpteHead->va;
+			newpte->next->pa = alloc_userpage(new_as,oldpteHead->va);
+			memmove((void *)PADDR_TO_KVADDR(newpte->next->pa),
+					(const void *)PADDR_TO_KVADDR(oldpteHead->pa),
+					PAGE_SIZE);*/
+
+			newpteHead->next=newpte;
+			newpteHead = newpteHead->next;
+
 			oldpteHead = oldpteHead->next;
 		}
-		newpte->next = NULL;
 	}
 	else
 	{
@@ -194,6 +202,8 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 
 	npages = sz / PAGE_SIZE;
 
+	// npages+=1;
+
 	int permission = get_permissions_int( readable,  writeable,  executable);
 
 	if (as->as_vbase1 == 0) {
@@ -229,7 +239,7 @@ as_prepare_load(struct addrspace *as)
 	as_set_rw_permission(&as->as_vbase1);
 	as_set_rw_permission(&as->as_vbase2);
 
-	vaddr_t vaddr = as->as_vbase1 & PAGE_FRAME;
+	/*vaddr_t vaddr = as->as_vbase1 & PAGE_FRAME;
 	int npages = as->as_npages1;
 
 	struct page_table_entry *pte_head = as->pte;
@@ -292,7 +302,7 @@ as_prepare_load(struct addrspace *as)
 		}
 		ch++;
 	}
-
+*/
 
 
 	(void)as;

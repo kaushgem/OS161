@@ -322,29 +322,21 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	}
 
 	if(!ispageInPte){
-		//kprintf("\n page is not in pte");
 		paddr = alloc_userpage(as,faultaddress);
-		//kprintf("\n user page allocated");
 		struct page_table_entry *newpte = kmalloc(sizeof(struct page_table_entry));
-		//kprintf("\n pte entry created");
 		newpte->pa = paddr;
 		newpte->va = faultaddress;
 		newpte->next = NULL;
-
-		//kprintf("\n pte entry initialised");
 
 		if(as->pte==NULL){
 			as->pte = newpte;
 		}else{
 			prevpte->next = newpte;
 		}
-		//kprintf("\n pte entry assigned to table");
 	}
 
-	//kprintf("\n physical address successfully allocated: %d",paddr);
-
 	/* make sure it's page-aligned */
-	// KASSERT((paddr & PAGE_FRAME) == paddr);
+	KASSERT((paddr & PAGE_FRAME) == paddr);
 
 	/* Disable interrupts on this CPU while frobbing the TLB. */
 	spl = splhigh();
@@ -358,13 +350,11 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		ehi = faultaddress;
 		elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
 		DEBUG(DB_VM, "dumbvm: 0x%x -> 0x%x\n", faultaddress, paddr);
-		// kprintf("\n TLB entry added %d %d", ehi,elo);
 		tlb_write(ehi, elo, i);
 		splx(spl);
 		return 0;
 	}
 
-	//kprintf("dumbvm: Ran out of TLB entries - cannot handle page fault\n");
 	splx(spl);
 	return EFAULT;
 }
