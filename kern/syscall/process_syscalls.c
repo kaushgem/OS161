@@ -201,6 +201,7 @@ pid_t waitpid(pid_t pid, int* status, int options, int *error)
 	}
 
 	if(pid == getpid()){
+
 		*error = ECHILD;
 	}
 
@@ -212,12 +213,7 @@ pid_t waitpid(pid_t pid, int* status, int options, int *error)
 	struct process_block *childProcess = pid_array[pid];
 
 
-	if(currentProcess->parent_pid == childProcess->parent_pid)
-	{
-		*error = ECHILD;
-		//kprintf("\n Waiting for itself // invalid child process: %d", (int)pid);
-		return -1;
-	}
+
 
 
 	//kprintf("\nwaitpid: validating  childProcess");
@@ -243,7 +239,7 @@ pid_t waitpid(pid_t pid, int* status, int options, int *error)
 	isChild = currentProcess->childpid[pid];
 
 	if(!isChild){
-		kprintf("\n not a  child process");
+		kprintf("\n not a  child process. mypid %d child pid %d \n",curthread->pid,pid);
 		*error = ECHILD;
 		return -1;
 	}

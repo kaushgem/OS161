@@ -500,11 +500,53 @@ thread_fork(const char *name,
 	// *************************
 	// allocate process id
 
+	struct process_block  *cpb = init_process_block(getpid());
+	if(cpb == NULL){
+		return ENOMEM;
+	}
+	//spinlock_acquire(&pid_array_spinlock);
+	lock_acquire(pid_array_lock);
+
+	pid_t cpid = 0;
+	if(getpid()>-1){
+		 cpid = allocate_processid(); // remember to handle fork bomb
+		if(cpid<0){
+			//spinlock_release(&pid_array_spinlock);
+			lock_release(pid_array_lock);
+			return ENOMEM;
+		}
+
+		pid_array[getpid()]->childpid[cpid]=true;
+	}
+	else
+	{
+		// kprintf("\n\n**  pid = -1  **\n\n");
+		struct process_block  *ipb = init_process_block(getpid());
+		curthread->pid=allocate_processid();
+		pid_array[curthread->pid] = ipb;
+
+	 cpid = allocate_processid(); // remember to handle fork bomb
+		if(cpid<0){
+			//spinlock_release(&pid_array_spinlock);
+			lock_release(pid_array_lock);
+			return ENOMEM;
+		}
+
+
+		pid_array[getpid()]->childpid[cpid]=true;
+	}
+	pid_array[cpid] = cpb;
+	//spinlock_release(&pid_array_spinlock);
+	lock_release(pid_array_lock);
+
+
+
+
 
 
 
 	newthread = thread_create(name);
-
+	newthread->pid = cpid;
 	if (newthread == NULL) {
 		return ENOMEM;
 	}
@@ -552,32 +594,7 @@ thread_fork(const char *name,
 		}
 	}
 
-	struct process_block  *cpb = init_process_block(getpid());
-	if(cpb == NULL){
-		return ENOMEM;
-	}
-	//spinlock_acquire(&pid_array_spinlock);
-	lock_acquire(pid_array_lock);
-	pid_t cpid = allocate_processid(); // remember to handle fork bomb
-	if(cpid<0){
-		//spinlock_release(&pid_array_spinlock);
-		lock_release(pid_array_lock);
-		return ENOMEM;
-	}
 
-	newthread->pid = cpid;
-	if(getpid()>1){
-		pid_array[getpid()]->childpid[cpid]=true;
-	}{
-		// kprintf("\n\n**  pid = -1  **\n\n");
-		struct process_block  *ipb = init_process_block(getpid());
-		curthread->pid=1;
-		pid_array[curthread->pid] = ipb;
-		pid_array[getpid()]->childpid[cpid]=true;
-	}
-	pid_array[cpid] = cpb;
-	//spinlock_release(&pid_array_spinlock);
-	lock_release(pid_array_lock);
 
 	// *************************
 
