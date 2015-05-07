@@ -42,15 +42,15 @@ void vm_bootstrap(void){
 	for(int i=0; i< total_pages ; i++){
 		addr = coremap_base + i * PAGE_SIZE;
 
+		coremap[i].vaddr = 0;
 		coremap[i].as = NULL;
-		coremap[i].npages = 1;
+		coremap[i].npages = 0;
 
 		if(addr < free_addr){
-			coremap[i].vaddr = PADDR_TO_KVADDR(addr);
 			coremap[i].state = FIXED;
 		}
 		else{
-			coremap[i].vaddr = 0;
+
 			coremap[i].state = FREE;
 		}
 	}
