@@ -26,34 +26,33 @@ int bp(void);
 void vm_bootstrap(void){
 
 	paddr_t start, end, free_addr;
+
 	ram_getsize(&start, &end);
-	total_pages = (end - start) / PAGE_SIZE;
-	//total_pages = ROUNDUP(end, PAGE_SIZE) / PAGE_SIZE;
+
+	start = ROUNDUP(start, PAGE_SIZE);
+	end = (end / PAGE_SIZE)*PAGE_SIZE;
+
 	coremap = (struct coremap_entry*) PADDR_TO_KVADDR(start);
+
 	free_addr = start + total_pages * sizeof(struct coremap_entry);
+	free_addr = ROUNDUP(free_addr, PAGE_SIZE);
+
+	total_pages = (end - free_addr) / PAGE_SIZE;
 
 	kprintf("\n************RAM Address*****************");
 	kprintf("\nStart:%d End:%d End(ROUNDUP):%d",start,end,ROUNDUP(end, PAGE_SIZE));
 	kprintf("\nFree:%d TotalPages:%d\n\n",free_addr,total_pages);
 
-	coremap_base = start;
+	coremap_base = free_addr;
 	paddr_t addr;
 
 	for(int i=0; i< total_pages ; i++){
 		addr = coremap_base + i * PAGE_SIZE;
 
-
+		coremap[i].vaddr = 0;
 		coremap[i].as = NULL;
 		coremap[i].npages = 1;
-
-		if(addr < free_addr){
-			coremap[i].vaddr = PADDR_TO_KVADDR(addr);
-			coremap[i].state = FIXED;
-		}
-		else{
-			coremap[i].vaddr = 0;
-			coremap[i].state = FREE;
-		}
+		coremap[i].state = FREE;
 	}
 
 	is_vm_bootstrapped = true;
@@ -252,12 +251,13 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	KASSERT(as->as_vbase2 != 0);
 	KASSERT(as->as_npages2 != 0);
 
+	(void)faulttype;
 	vbase1 = as->as_vbase1;
-	int vbase1perm = vbase1&~PAGE_FRAME;
+	//int vbase1perm = vbase1&~PAGE_FRAME;
 	vbase1 = vbase1&PAGE_FRAME;
 
 	vbase2 = as->as_vbase2;
-	int vbase2perm = vbase2&~PAGE_FRAME;
+	//int vbase2perm = vbase2&~PAGE_FRAME;
 	vbase2 = vbase2&PAGE_FRAME;
 
 	vtop1 = vbase1 + as->as_npages1 * PAGE_SIZE;
@@ -268,41 +268,27 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 
 	//KASSERT((faultaddress & PAGE_FRAME) ==faultaddress);
 
-
 	if(faultaddress == 0x403000){
 		bp();
 	}
 
 	int error = 0;
-	// kprintf("\n***** vm fault ******");
-	// kprintf("\n fault address: %d fault type: %d",faultaddress,faulttype);
-	/*kprintf("\nvbase 1: %d vtop 1: %d",vbase1,vtop1 );
-	kprintf("\nvbase 2: %d vtop 2: %d",vbase2,vtop2 );
-	kprintf("\nstackbase: %d stacktop: %d",vbase1,vtop1 );
-	kprintf("\nhstart: %d hend: %d",as->hstart,as->hend );
-	 */
 
-	if (faultaddress >= vbase1 && faultaddress < vtop1) {
-		error = validate_permission(faulttype, vbase1perm);
-		//kprintf("\n vbase 1 validated Error is %d",error);
-	}else if (faultaddress >= vbase2 && faultaddress < vtop2) {
-
-		error = validate_permission(faulttype, vbase2perm);
-	}else if (faultaddress >= stackbase && faultaddress < stacktop) {
-
-		error = validate_permission(faulttype, 7);
-	}else if (faultaddress >= as->hstart && faultaddress < as->hend) {
-
-		error = validate_permission(faulttype, 7);
+	/*if (faultaddress >= vbase1 && faultaddress <= vtop1) {
+		error = 0;//validate_permission(faulttype, vbase1perm);
+	}else if (faultaddress >= vbase2 && faultaddress <= vtop2) {
+		error = 0;//validate_permission(faulttype, vbase2perm);
+	}else if (faultaddress >= stackbase && faultaddress <= stacktop) {
+		error = 0;//validate_permission(faulttype, 7);
+	}else if (faultaddress >= as->hstart && faultaddress <= as->hend) {
+		error = 0;//validate_permission(faulttype, 7);
 	}else {
 		return EFAULT;
-	}
+	}*/
 
-	if(error >0){
+	if(error > 0){
 		return error;
 	}
-
-	//kprintf("\n validated permissons");
 
 	// page is in pte
 	bool ispageInPte = false;
@@ -310,9 +296,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	struct page_table_entry *prevpte = ptehead;
 
 	while(ptehead!=NULL ){
-		if(faultaddress >= ptehead->va && faultaddress <(ptehead->va+PAGE_SIZE)){
-			//kprintf("\n page is in pte");
-			//panic("\n page is in pte");
+		if(faultaddress >= ptehead->va && faultaddress < (ptehead->va + PAGE_SIZE)){
 			paddr = (faultaddress - ptehead->va) + ptehead->pa;
 			ispageInPte = true;
 			break;
@@ -322,10 +306,13 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	}
 
 	if(!ispageInPte){
-		paddr = alloc_userpage(as,faultaddress);
+
 		struct page_table_entry *newpte = kmalloc(sizeof(struct page_table_entry));
-		newpte->pa = paddr;
 		newpte->va = faultaddress;
+
+		paddr = alloc_userpage(as,faultaddress);
+
+		newpte->pa = paddr;
 		newpte->next = NULL;
 
 		if(as->pte==NULL){
@@ -354,6 +341,10 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		splx(spl);
 		return 0;
 	}
+
+	// Jinghao comments
+
+	bp();
 
 	splx(spl);
 	return EFAULT;
