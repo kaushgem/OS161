@@ -16,6 +16,7 @@
 struct process_block* pid_array[__PID_MAX];
 struct spinlock pid_array_spinlock;
 struct lock *pid_array_lock;
+bool is_pid_array_lock_init;
 
 struct process_block
 {

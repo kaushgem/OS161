@@ -140,25 +140,27 @@ common_prog(int nargs, char **args)
 
 	struct thread *t1;
 
-	struct process_block  *pb = init_process_block(getpid());
-	//spinlock_acquire(&pid_array_spinlock);
+	/*struct process_block *pb = init_process_block(getpid());
+	pid_array[getpid()] = pb;
+
 	lock_acquire(pid_array_lock);
 	pid_t mypid = allocate_processid();
 	curthread->pid = mypid;
-	//kprintf("menu process pid: %d",(int)mypid);
+	pb = init_process_block(getpid());
 	pid_array[mypid] = pb;
-	//spinlock_release(&pid_array_spinlock);
-	lock_release(pid_array_lock);
+	lock_release(pid_array_lock);*/
+
+	//kprintf("ndfodinggoinfgonfiognfoignfiognfiogn %d \n\n\n\n",(int)getpid());
 
 	result = thread_fork(args[0] /* thread name */,
 			cmd_progthread /* thread function */,
 			args /* thread arg */, nargs /* thread arg */,
 			&t1);
 
-	//lock_acquire(pid_array_lock);
-	pb->childpid[t1->pid]=true;
+	pid_t pid = getpid();
+	pid_array[pid]->childpid[t1->pid] = true;
+	//pb->childpid[t1->pid]=true;
 	//add_child(pid_array[getpid()]->child,t1->pid);
-	//lock_release(pid_array_lock);
 
 	int status=0, error=0;
 	//kprintf("pid %d\n", (int)t1->pid);

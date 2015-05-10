@@ -127,7 +127,19 @@ thread_create(const char *name)
 	if (thread == NULL) {
 		return NULL;
 	}
-	thread->pid = -1;
+
+	if(is_pid_array_lock_init && !lock_is_acquired(pid_array_lock))
+		lock_acquire(pid_array_lock);
+
+	pid_t pid = allocate_processid();
+	thread->pid = pid;
+	struct process_block *pb = init_process_block(pid);
+	pid_array[pid] = pb;
+
+	if(is_pid_array_lock_init)
+		lock_release(pid_array_lock);
+
+	//thread->pid = -1;
 
 	thread->t_name = kstrdup(name);
 	if (thread->t_name == NULL) {
@@ -363,8 +375,11 @@ thread_bootstrap(void)
 {
 	struct cpu *bootcpu;
 	struct thread *bootthread;
+	is_pid_array_lock_init = false;
 
 	cpuarray_init(&allcpus);
+
+
 
 	/*
 	 * Create the cpu structure for the bootup CPU, the one we're
@@ -392,9 +407,9 @@ thread_bootstrap(void)
 	curthread->t_cpu = curcpu;
 	curcpu->c_curthread = curthread;
 
-	/* Done */
-	//spinlock_init(&pid_array_spinlock);
+	is_pid_array_lock_init = true;
 	pid_array_lock =lock_create("pid_array_lock");
+	/* Done */
 }
 
 /*
@@ -500,22 +515,19 @@ thread_fork(const char *name,
 	// *************************
 	// allocate process id
 
-	struct process_block  *cpb = init_process_block(getpid());
+	/*struct process_block  *cpb = init_process_block(getpid());
 	if(cpb == NULL){
 		return ENOMEM;
 	}
-	//spinlock_acquire(&pid_array_spinlock);
 	lock_acquire(pid_array_lock);
 
 	pid_t cpid = 0;
 	if(getpid()>-1){
-		 cpid = allocate_processid(); // remember to handle fork bomb
+		cpid = allocate_processid(); // remember to handle fork bomb
 		if(cpid<0){
-			//spinlock_release(&pid_array_spinlock);
 			lock_release(pid_array_lock);
 			return ENOMEM;
 		}
-
 		pid_array[getpid()]->childpid[cpid]=true;
 	}
 	else
@@ -525,28 +537,26 @@ thread_fork(const char *name,
 		curthread->pid=allocate_processid();
 		pid_array[curthread->pid] = ipb;
 
-	 cpid = allocate_processid(); // remember to handle fork bomb
+		cpid = allocate_processid(); // remember to handle fork bomb
 		if(cpid<0){
-			//spinlock_release(&pid_array_spinlock);
 			lock_release(pid_array_lock);
 			return ENOMEM;
 		}
-
-
 		pid_array[getpid()]->childpid[cpid]=true;
 	}
 	pid_array[cpid] = cpb;
-	//spinlock_release(&pid_array_spinlock);
-	lock_release(pid_array_lock);
+	lock_release(pid_array_lock);*/
 
-
-
-
-
+	////////////////////////////////////////////////////////////////////////////
 
 
 	newthread = thread_create(name);
-	newthread->pid = cpid;
+	lock_acquire(pid_array_lock);
+	pid_t pid = getpid();
+
+	pid_array[pid]->childpid[newthread->pid]=true;
+	lock_release(pid_array_lock);
+	//newthread->pid = cpid;
 	if (newthread == NULL) {
 		return ENOMEM;
 	}
@@ -582,10 +592,6 @@ thread_fork(const char *name,
 	 */
 	newthread->t_iplhigh_count++;
 
-	/* Set up the switchframe so entrypoint() gets called */
-	switchframe_init(newthread, entrypoint, data1, data2);
-
-
 	// Copying File Descriptor table
 	for(int i=0; i<__OPEN_MAX; i++){
 		newthread->t_fdtable[i] = curthread->t_fdtable[i];
@@ -594,13 +600,14 @@ thread_fork(const char *name,
 		}
 	}
 
-
+	/* Set up the switchframe so entrypoint() gets called */
+	switchframe_init(newthread, entrypoint, data1, data2);
 
 	// *************************
 
-	int t = splhigh();
+	//int t = splhigh();
 	// kprintf("\n----> ((1))thread_fork: curpid: %d, child pid: %d\n",(int)getpid(), cpid);
-	splx(t);
+	//splx(t);
 
 	thread_make_runnable(newthread, false);
 
@@ -618,20 +625,13 @@ thread_fork(const char *name,
 }
 
 
-void  destroy_zombies(void)
-{
-
-
-	while(curcpu->c_zombies.tl_count > 0)
-	{
+void  destroy_zombies(void) {
+	while(curcpu->c_zombies.tl_count > 0){
 		kprintf("\n          hhhhhhhhhhh  %d",curcpu->c_zombies.tl_count);
 		struct thread *tln = curcpu->c_zombies.tl_tail.tln_self;
 		threadlist_remove(&curcpu->c_zombies, curcpu->c_zombies.tl_tail.tln_self);
 		thread_destroy(tln);
 	}
-
-
-
 }
 
 
