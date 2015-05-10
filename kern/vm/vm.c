@@ -149,7 +149,7 @@ void free_kpages(vaddr_t vaddr){
 
 
 paddr_t alloc_userpage(struct addrspace *as, vaddr_t vaddr){
-	paddr_t addr;
+	paddr_t addr = 0;
 
 	spinlock_acquire(&coremap_lock);
 
@@ -167,6 +167,9 @@ paddr_t alloc_userpage(struct addrspace *as, vaddr_t vaddr){
 	}
 
 	spinlock_release(&coremap_lock);
+
+	KASSERT(addr != 0);
+
 	return addr;
 }
 
@@ -253,11 +256,11 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 
 	(void)faulttype;
 	vbase1 = as->as_vbase1;
-	//int vbase1perm = vbase1&~PAGE_FRAME;
+	int vbase1perm = vbase1&~PAGE_FRAME;
 	vbase1 = vbase1&PAGE_FRAME;
 
 	vbase2 = as->as_vbase2;
-	//int vbase2perm = vbase2&~PAGE_FRAME;
+	int vbase2perm = vbase2&~PAGE_FRAME;
 	vbase2 = vbase2&PAGE_FRAME;
 
 	vtop1 = vbase1 + as->as_npages1 * PAGE_SIZE;
@@ -268,23 +271,23 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 
 	//KASSERT((faultaddress & PAGE_FRAME) ==faultaddress);
 
-	if(faultaddress == 0x403000){
+	if(faultaddress == 4210688){
 		bp();
 	}
 
 	int error = 0;
 
-	/*if (faultaddress >= vbase1 && faultaddress <= vtop1) {
-		error = 0;//validate_permission(faulttype, vbase1perm);
+	if (faultaddress >= vbase1 && faultaddress <= vtop1) {
+		error = validate_permission(faulttype, vbase1perm);
 	}else if (faultaddress >= vbase2 && faultaddress <= vtop2) {
-		error = 0;//validate_permission(faulttype, vbase2perm);
+		error = validate_permission(faulttype, vbase2perm);
 	}else if (faultaddress >= stackbase && faultaddress <= stacktop) {
-		error = 0;//validate_permission(faulttype, 7);
+		error = validate_permission(faulttype, 7);
 	}else if (faultaddress >= as->hstart && faultaddress <= as->hend) {
-		error = 0;//validate_permission(faulttype, 7);
+		error = validate_permission(faulttype, 7);
 	}else {
 		return EFAULT;
-	}*/
+	}
 
 	if(error > 0){
 		return error;
@@ -328,7 +331,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	/* Disable interrupts on this CPU while frobbing the TLB. */
 	spl = splhigh();
 
-	for (i=0; i<NUM_TLB; i++)
+	/*for (i=0; i<NUM_TLB; i++)
 	{
 		tlb_read(&ehi, &elo, i);
 		if (elo & TLBLO_VALID) {
@@ -340,11 +343,28 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		tlb_write(ehi, elo, i);
 		splx(spl);
 		return 0;
+	}*/
+
+	i = tlb_probe((uint32_t)faultaddress, (uint32_t)paddr);
+	if(i!=-1){
+		ehi = faultaddress;
+		elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
+		DEBUG(DB_VM, "dumbvm: 0x%x -> 0x%x\n", faultaddress, paddr);
+		tlb_write(ehi, elo, i);
+		splx(spl);
+		return 0;
+	}else{
+		ehi = faultaddress;
+		elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
+		DEBUG(DB_VM, "dumbvm: 0x%x -> 0x%x\n", faultaddress, paddr);
+		tlb_random(ehi, elo);
+		splx(spl);
+		return 0;
 	}
 
 	// Jinghao comments
 
-	bp();
+
 
 	splx(spl);
 	return EFAULT;

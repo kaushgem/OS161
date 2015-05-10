@@ -68,6 +68,7 @@ as_create(void)
 	as->as_npages2 = 0;
 	as->hend = 0;
 	as->hstart = 0;
+	as->as_stackvbase = USERSTACK - VM_STACKPAGES * PAGE_SIZE;
 
 	return as;
 }
@@ -94,6 +95,8 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 	if (oldpteHead != NULL)
 	{
 		struct page_table_entry *newpteHead = kmalloc(sizeof(struct page_table_entry));
+		struct page_table_entry *newpteStart = newpteHead;
+
 		newpteHead->va = oldpteHead->va;
 		newpteHead->pa = alloc_userpage(new_as,oldpteHead->va);
 		memmove((void *)PADDR_TO_KVADDR(newpteHead->pa),
@@ -124,6 +127,7 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 
 			oldpteHead = oldpteHead->next;
 		}
+		new_as->pte = newpteStart;
 	}
 	else
 	{
@@ -133,6 +137,9 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 
 	new_as->hend = old->hend;
 	new_as->hstart = old->hstart;
+	new_as->as_stackvbase = old->as_stackvbase;
+
+	b();
 
 	*ret = new_as;
 	return 0;
@@ -202,7 +209,7 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 
 	npages = sz / PAGE_SIZE;
 
-	// npages+=1;
+	//npages+=1;
 
 	int permission = get_permissions_int( readable,  writeable,  executable);
 
@@ -222,6 +229,7 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 
 	as->as_stackvbase = USERSTACK -(VM_STACKPAGES)*12;
 
+	// KASSERT() - There won't be more than 2 regions
 
 	return 0;
 }
