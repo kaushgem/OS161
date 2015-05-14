@@ -310,21 +310,21 @@ execv(const char *prog_name, char **argv)
 		return EFAULT;
 	}
 
-	if (	progname == (const char *)0x40000000 || progname == (const char *)0x80000000 ||
+	/*if (	progname == (const char *)0x40000000 || progname == (const char *)0x80000000 ||
 			argv == (char **)0x40000000 || argv == (char **)0x80000000)		return EFAULT;
 	if(    strcmp(progname,"")    ) return EFAULT;
 	if(    strcmp((const char*)*argv,"")    ) return EINVAL;
 	if(    strcmp(progname,"\0")   ) return EINVAL;
 	if(    strcmp((const char*)*argv,"\0")   ) return EINVAL;
 	if(    strlen(progname) == 0   ) return EINVAL;
-	if(    strlen((const char*)*argv) == 0   ) return EINVAL;
+	if(    strlen((const char*)*argv) == 0   ) return EINVAL;*/
 
 	int i;
 	for(i=0 ; argv[i] != NULL ; i++){
 		if(argv == (char **)0x40000000 || argv == (char **)0x80000000)
 			return EFAULT;
 	}
-	argc = i-1;
+	argc = i;
 
 	kprintf("\n argc : %d\n",argc);
 
@@ -339,7 +339,7 @@ execv(const char *prog_name, char **argv)
 	}
 
 	/* We should be a new thread. */
-	KASSERT(curthread->t_addrspace == NULL);
+	//KASSERT(curthread->t_addrspace == NULL);
 
 	/* Create a new address space. */
 	curthread->t_addrspace = as_create();
@@ -376,7 +376,7 @@ execv(const char *prog_name, char **argv)
 
 	if(argc > 0)
 	{
-		kargv[argc]=0;
+		//kargv[argc]=0;
 		for(int i=0 ; i < argc ; i++){
 			arglen = strlen(argv[i])+1;
 			arglen_pad =arglen	+ (4- ((arglen)%4));
