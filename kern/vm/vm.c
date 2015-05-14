@@ -193,15 +193,16 @@ void free_userpage(vaddr_t vaddr){
 				coremap[i].npages = 0;
 				coremap[i].state = FREE;
 				isFreed = true;
-				//kprintf("\n Great** Virtual (%d) freeeeed\n",vaddr);
 				break;
 			}
 		}
 	}
 
 	spinlock_release(&coremap_lock);
-	if(!isFreed)
-		kprintf("\n Err** Virtual (%d) not found\n",vaddr);
+
+	//KASSERT(isFreed == true);
+	//if(!isFreed)
+		//kprintf("\n Err** Virtual (%d) not found\n",vaddr);
 }
 
 
@@ -229,11 +230,12 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 {
 	vaddr_t vbase1, vtop1, vbase2, vtop2, stackbase, stacktop;
 	paddr_t paddr;
-	int i;
 	uint32_t ehi, elo;
+
 	struct addrspace *as;
-	int spl;
-	vm_faultcounter+=1;
+	int i, spl;
+
+	vm_faultcounter += 1;
 	faultaddress &= PAGE_FRAME;
 
 	DEBUG(DB_VM, "dumbvm: fault: 0x%x\n", faultaddress);
@@ -286,7 +288,8 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	}else if (faultaddress >= as->hstart && faultaddress <= as->hend) {
 		error = validate_permission(faulttype, 7);
 	}else {
-		return EFAULT;
+		panic("\n**Err**Not in any region || Faultaddress: %d \n\n",faultaddress);
+		//return EFAULT;
 	}
 
 	if(error > 0){
@@ -364,10 +367,19 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 
 	// Jinghao comments
 
-
-
 	splx(spl);
 	return EFAULT;
+}
+
+
+
+
+// Utility Functions
+
+
+int bp()
+{
+	return 0;
 }
 
 
@@ -376,17 +388,11 @@ paddr_t get_physical_address(int code_index)
 	return coremap_base + code_index*PAGE_SIZE;
 }
 
-int bp()
-{
-	return 0;
-}
-
 
 int validate_permission(int faulttype, int  permission)
 {
 	//int isReadable = permission&1;
 	int isWriteable = permission&2;
-	// kprintf("\n Permssion %d isReadable %d iswritable %d ",permission,isReadable,isWriteable);
 
 	switch (faulttype)
 	{
@@ -401,6 +407,7 @@ int validate_permission(int faulttype, int  permission)
 	}
 	return 0;
 }
+
 
 int as_get_permission(vaddr_t vadd)
 {

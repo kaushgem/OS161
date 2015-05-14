@@ -56,10 +56,6 @@ as_create(void)
 		return NULL;
 	}
 
-	/*
-	 * Initialize as needed.
-	 */
-
 	as->pte = NULL;
 
 	as->as_vbase1 = 0;
@@ -80,7 +76,7 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 	struct addrspace *new_as;
 
 	new_as = as_create();
-	if (new_as==NULL) {
+	if (new_as == NULL) {
 		return ENOMEM;
 	}
 
@@ -102,6 +98,7 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 		memmove((void *)PADDR_TO_KVADDR(newpteHead->pa),
 				(const void *)PADDR_TO_KVADDR(oldpteHead->pa),
 				PAGE_SIZE);
+		newpteHead->next=NULL;
 
 		oldpteHead = oldpteHead->next;
 
@@ -115,13 +112,6 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 					PAGE_SIZE);
 			newpte->next=NULL;
 
-			/*newpte->next = kmalloc(sizeof(struct page_table_entry));
-			newpte->next->va = oldpteHead->va;
-			newpte->next->pa = alloc_userpage(new_as,oldpteHead->va);
-			memmove((void *)PADDR_TO_KVADDR(newpte->next->pa),
-					(const void *)PADDR_TO_KVADDR(oldpteHead->pa),
-					PAGE_SIZE);*/
-
 			newpteHead->next=newpte;
 			newpteHead = newpteHead->next;
 
@@ -133,13 +123,15 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 	{
 		//kprintf("\n something wrong :-O");
 	}
-	// copy heap limits
 
 	new_as->hend = old->hend;
 	new_as->hstart = old->hstart;
 	new_as->as_stackvbase = old->as_stackvbase;
 
 	b();
+
+	KASSERT(new_as != NULL);
+	KASSERT(new_as != old);
 
 	*ret = new_as;
 	return 0;
@@ -149,20 +141,18 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 void
 as_destroy(struct addrspace *as)
 {
-	/*
-	 * Clean up as needed.
-	 */
-
 	struct page_table_entry *pte = as->pte;
+	struct page_table_entry *next = NULL;
+
 	while(pte!=NULL)
 	{
-		struct page_table_entry *next = pte->next;
+		next = pte->next;
 
 		free_userpage(pte->va);
 		kfree(pte);
+
 		pte = next;
 	}
-
 	kfree(as);
 }
 
@@ -170,9 +160,6 @@ as_destroy(struct addrspace *as)
 void
 as_activate(struct addrspace *as)
 {
-	/*
-	 * Write this.
-	 */
 	vm_tlbshootdown_all();
 	(void)as;  // suppress warning until code gets written
 }
@@ -194,10 +181,6 @@ int
 as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 		int readable, int writeable, int executable)
 {
-	/*
-	 * Write this.
-	 */
-
 	size_t npages;
 
 	/* Align the region. First, the base... */
@@ -224,28 +207,20 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 
 	if (as->hstart < (vaddr + sz)) {
 		as->hstart = vaddr + sz;
-		as->hend = as->hstart;
+		as->hend = vaddr + sz;
 	}
 
-	as->as_stackvbase = USERSTACK -(VM_STACKPAGES)*12;
+	as->as_stackvbase = USERSTACK - (VM_STACKPAGES)*12;
 
 	// KASSERT() - There won't be more than 2 regions
 
 	return 0;
 }
 
-int b()
-{
-	return 0;
-}
 
 int
 as_prepare_load(struct addrspace *as)
 {
-	/*
-	 * Write this.
-	 */
-
 	as_set_rw_permission(&as->as_vbase1);
 	as_set_rw_permission(&as->as_vbase2);
 
@@ -313,8 +288,6 @@ as_prepare_load(struct addrspace *as)
 		ch++;
 	}
 */
-
-
 	(void)as;
 	return 0;
 }
@@ -323,10 +296,6 @@ as_prepare_load(struct addrspace *as)
 int
 as_complete_load(struct addrspace *as)
 {
-	/*
-	 * Write this.
-	 */
-
 	as_reset_rw_permission(&as->as_vbase1);
 	as_reset_rw_permission(&as->as_vbase2);
 
@@ -338,15 +307,22 @@ as_complete_load(struct addrspace *as)
 int
 as_define_stack(struct addrspace *as, vaddr_t *stackptr)
 {
-	/*
-	 * Write this.
-	 */
-
 	(void)as;
 
 	/* Initial user-level stack pointer */
 	*stackptr = USERSTACK;
 
+	return 0;
+}
+
+
+
+
+// Utility Functions
+
+
+int b()
+{
 	return 0;
 }
 
@@ -357,7 +333,7 @@ int get_permissions_int(int r, int w, int x)
 		r=1;
 	if(w>0)
 		w=1;
-	if(x >0)
+	if(x>0)
 		x=1;
 	//kprintf("\n getting permission ints r: %d w :%d x :%d",r,w,x);
 	int op = 0;
