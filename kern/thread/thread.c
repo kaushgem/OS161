@@ -409,6 +409,13 @@ thread_bootstrap(void)
 
 	is_pid_array_lock_init = true;
 	pid_array_lock =lock_create("pid_array_lock");
+	cpid_array_lock =lock_create("cid_array_lock");
+
+	for( int i=0; i <__PID_MAX; i++)
+	{
+		childpid[i]=0;
+	}
+
 	/* Done */
 }
 
@@ -554,8 +561,17 @@ thread_fork(const char *name,
 	lock_acquire(pid_array_lock);
 	pid_t pid = getpid();
 
-	pid_array[pid]->childpid[newthread->pid]=true;
+	// pid_array[pid]->childpid[newthread->pid]=true;
+
+
 	lock_release(pid_array_lock);
+
+	lock_acquire(cpid_array_lock);
+	childpid[newthread->pid]=pid;
+	lock_release(cpid_array_lock);
+
+
+
 	//newthread->pid = cpid;
 	if (newthread == NULL) {
 		return ENOMEM;

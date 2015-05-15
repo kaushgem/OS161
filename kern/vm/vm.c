@@ -111,7 +111,7 @@ paddr_t getppages_vm(int npages){
 			coremap[i].vaddr = PADDR_TO_KVADDR(addr);
 			coremap[i].npages = npages;
 			for(int k=0; k<npages ; k++){
-				bzero((void *)PADDR_TO_KVADDR(addr), PAGE_SIZE);
+				//bzero((void *)PADDR_TO_KVADDR(addr), PAGE_SIZE);
 				coremap[i++].state = FIXED;
 			}
 
@@ -160,7 +160,7 @@ paddr_t alloc_userpage(struct addrspace *as, vaddr_t vaddr){
 			coremap[i].as = as;
 			coremap[i].npages = 1;
 			coremap[i].state = DIRTY;
-			bzero((void *)PADDR_TO_KVADDR(addr),PAGE_SIZE);
+			//bzero((void *)PADDR_TO_KVADDR(addr),PAGE_SIZE);
 
 			break;
 		}

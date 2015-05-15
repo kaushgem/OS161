@@ -158,7 +158,12 @@ common_prog(int nargs, char **args)
 			&t1);
 
 	pid_t pid = getpid();
-	pid_array[pid]->childpid[t1->pid] = true;
+	//pid_array[pid]->childpid[t1->pid] = true;
+
+	lock_acquire(cpid_array_lock);
+	childpid[t1->pid]= getpid();
+	lock_release(cpid_array_lock);
+
 	//pb->childpid[t1->pid]=true;
 	//add_child(pid_array[getpid()]->child,t1->pid);
 

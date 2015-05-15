@@ -41,10 +41,10 @@ struct process_block *init_process_block(pid_t parentpid)
 	pb->process_sem = sem_create("proc_sem",0);
 	pb->exited = false;
 
-	for( int i=0; i < __PID_MAX ; i++)
+	/*for( int i=0; i < __PID_MAX ; i++)
 	{
 		pb->childpid[i] = false;
-	}
+	}*/
 	pb->exitcode = 0;
 	return pb;
 }
@@ -241,7 +241,18 @@ pid_t waitpid(pid_t pid, int* status, int options, int *error)
 		currentProcess->child = currentProcess->child->next;
 	}*/
 
-	isChild = currentProcess->childpid[pid];
+	//isChild = currentProcess->childpid[pid];
+
+
+	pid_t mypid = getpid();
+	for( int i=0; i <__PID_MAX; i++)
+	{
+		if(childpid[i]==mypid)
+			isChild = true;
+
+	}
+
+
 
 	if(!isChild){
 		kprintf("\n not a  child process");
@@ -264,15 +275,16 @@ pid_t waitpid(pid_t pid, int* status, int options, int *error)
 	*status = childProcess->exitcode;
 	//remove_child(currentProcess->child, pid);
 	//kprintf("\nwaitpid: cv waiting done. destroying child process");
-	currentProcess->childpid[pid] = false;
+	// currentProcess->childpid[pid] = false;
+	childpid[pid]=0;
 	//kprintf("\n destroying process: %d",(int)pid);
 	destroy_process_block(childProcess);
 	pid_array[pid] = NULL;
 
 
-	lock_acquire(pid_array_lock);
-	destroy_zombies();
-	lock_release(pid_array_lock);
+	//lock_acquire(pid_array_lock);
+	//destroy_zombies();
+	// lock_release(pid_array_lock);
 
 
 
@@ -422,14 +434,17 @@ sbrk(intptr_t amount, int *error){
 
 	struct addrspace *as = curthread->t_addrspace;
 	vaddr_t prev_hend = as->hend;
+	vaddr_t stackTop = USERSTACK - VM_STACKPAGES * PAGE_SIZE;
 
 	if((as->hend + amount) < as->hstart){
 		*error = EINVAL;
 		return -1;
-	}else if((as->hend + amount) > as->as_stackvbase){
+	}else if((as->hend + amount) > stackTop){
 		*error = ENOMEM;
 		return -1;
 	}
+
+	//KASSERT(amount>0);
 
 	as->hend = as->hend + amount;
 
