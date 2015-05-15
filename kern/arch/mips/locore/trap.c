@@ -343,7 +343,9 @@ mips_trap(struct trapframe *tf)
 	 * kernel will (most likely) hang the system, so it's better
 	 * to find out now.
 	 */
-	KASSERT(SAME_STACK(cpustacks[curcpu->c_number]-1, (vaddr_t)tf));
+	//KASSERT(SAME_STACK(cpustacks[curcpu->c_number]-1, (vaddr_t)tf));
+	KASSERT(((vaddr_t)tf) >= ((vaddr_t)curthread->t_stack));
+	KASSERT(((vaddr_t)tf) < ((vaddr_t)curthread->t_stack+STACK_SIZE));
 }
 
 /*
