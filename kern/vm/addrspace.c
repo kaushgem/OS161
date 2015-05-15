@@ -64,7 +64,7 @@ as_create(void)
 	as->as_npages2 = 0;
 	as->hend = 0;
 	as->hstart = 0;
-	as->as_stackvbase = USERSTACK - VM_STACKPAGES * PAGE_SIZE;
+	as->as_stackvbase = USERSTACK - (VM_STACKPAGES * PAGE_SIZE);
 
 	return as;
 }
@@ -210,7 +210,7 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 		as->hend = vaddr + sz;
 	}
 
-	as->as_stackvbase = USERSTACK - (VM_STACKPAGES)*12;
+	as->as_stackvbase = USERSTACK - (VM_STACKPAGES * PAGE_SIZE);
 
 	// KASSERT() - There won't be more than 2 regions
 

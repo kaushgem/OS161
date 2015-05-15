@@ -21,12 +21,9 @@ bool is_pid_array_lock_init;
 struct process_block
 {
 	pid_t parent_pid;
-	//struct lock *process_cv_lock;
 	bool exited;
 	int exitcode;
 	bool childpid[__PID_MAX];
-	// struct thread *t;
-	//struct child *child;
 	struct semaphore *process_sem;
 };
 

@@ -24,6 +24,7 @@ pid_t allocate_processid()
 {
 	for( pid_t i=5; i <__PID_MAX; i++){
 		if(pid_array[i] == NULL){
+			//kprintf("Allocated pid: %d\n",i);
 			return i;
 		}
 	}
@@ -332,10 +333,7 @@ execv(const char *prog_name, char **argv)
 	vaddr_t entrypoint, stackptr;
 	int result;
 
-
-
-
-
+	//Copy arguments into Temporary Kernel buffer
 	char *ktemp[argc];
 	int argvlen[argc];
 
@@ -347,12 +345,7 @@ execv(const char *prog_name, char **argv)
 		ktemp[m] = kmalloc(len_padding);
 		size_t *p;
 		err = copyinstr((const_userptr_t)argv[m], ktemp[m], len, p);
-		//panic("copied");
 	}
-
-
-
-
 
 	/* Open the file. */
 	result = vfs_open((char*)progname, O_RDONLY, 0, &v);
@@ -392,7 +385,7 @@ execv(const char *prog_name, char **argv)
 	}
 
 	// Load the arguments in user stack
-	vaddr_t kargv[argc+1];
+	vaddr_t kargv[argc];
 	size_t len_from_top = 0;
 	int arglen = 0, arglen_pad=0;
 
@@ -407,13 +400,13 @@ execv(const char *prog_name, char **argv)
 			kargv[i] =  stackptr - len_from_top;
 			copyout(ktemp[i], (userptr_t) kargv[i], arglen_pad);
 		}
-		stackptr = stackptr - len_from_top -(argc+1)*sizeof(vaddr_t);
-		for(int i=0 ; i <argc+1 ; i++){
+		stackptr = stackptr - len_from_top -(argc)*sizeof(vaddr_t);
+		for(int i=0 ; i <argc ; i++){
 			copyout( &kargv[i], (userptr_t) stackptr, sizeof(vaddr_t));
 			stackptr = stackptr + sizeof(vaddr_t);
 		}
 
-		stackptr = stackptr -(argc+1)*sizeof(vaddr_t);
+		stackptr = stackptr - (argc)*sizeof(vaddr_t);
 
 		/* Warp to user mode. */
 		enter_new_process( argc /*argc*/, (userptr_t) stackptr /*userspace addr of argv*/,
