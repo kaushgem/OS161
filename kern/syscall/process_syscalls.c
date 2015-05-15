@@ -332,6 +332,28 @@ execv(const char *prog_name, char **argv)
 	vaddr_t entrypoint, stackptr;
 	int result;
 
+
+
+
+
+	char *ktemp[argc];
+	int argvlen[argc];
+
+	for( int m=0; m <argc; m++)
+	{
+		int len = strlen(argv[m])+1;
+		argvlen[m] = len;
+		int len_padding = len + (4 - (len % 4));
+		ktemp[m] = kmalloc(len_padding);
+		size_t *p;
+		err = copyinstr((const_userptr_t)argv[m], ktemp[m], len, p);
+		//panic("copied");
+	}
+
+
+
+
+
 	/* Open the file. */
 	result = vfs_open((char*)progname, O_RDONLY, 0, &v);
 	if (result) {
@@ -374,15 +396,16 @@ execv(const char *prog_name, char **argv)
 	size_t len_from_top = 0;
 	int arglen = 0, arglen_pad=0;
 
+
 	if(argc > 0)
 	{
 		//kargv[argc]=0;
 		for(int i=0 ; i < argc ; i++){
-			arglen = strlen(argv[i])+1;
+			arglen = argvlen[i];
 			arglen_pad =arglen	+ (4- ((arglen)%4));
 			len_from_top = len_from_top + arglen_pad ;
 			kargv[i] =  stackptr - len_from_top;
-			copyout(argv[i], (userptr_t) kargv[i], arglen_pad);
+			copyout(ktemp[i], (userptr_t) kargv[i], arglen_pad);
 		}
 		stackptr = stackptr - len_from_top -(argc+1)*sizeof(vaddr_t);
 		for(int i=0 ; i <argc+1 ; i++){
@@ -391,6 +414,7 @@ execv(const char *prog_name, char **argv)
 		}
 
 		stackptr = stackptr -(argc+1)*sizeof(vaddr_t);
+
 		/* Warp to user mode. */
 		enter_new_process( argc /*argc*/, (userptr_t) stackptr /*userspace addr of argv*/,
 				stackptr, entrypoint);
