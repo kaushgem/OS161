@@ -44,7 +44,7 @@
 #define VM_FAULT_WRITE       1    /* A write was attempted */
 #define VM_FAULT_READONLY    2    /* A write to a readonly page was attempted*/
 /* under dumbvm, always have 48k of user stack */
-#define VM_STACKPAGES    20
+#define VM_STACKPAGES    12
 
 //state
 #define FREE 0

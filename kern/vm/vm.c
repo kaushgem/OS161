@@ -46,6 +46,8 @@ void vm_bootstrap(void){
 	coremap_base = free_addr;
 	paddr_t addr;
 
+	spinlock_acquire(&coremap_lock);
+
 	for(int i=0; i< total_pages ; i++){
 		addr = coremap_base + i * PAGE_SIZE;
 
@@ -54,6 +56,8 @@ void vm_bootstrap(void){
 		coremap[i].npages = 1;
 		coremap[i].state = FREE;
 	}
+
+	spinlock_release(&coremap_lock);
 
 	is_vm_bootstrapped = true;
 }
@@ -141,6 +145,10 @@ void free_kpages(vaddr_t vaddr){
 		coremap[i].vaddr = 0;
 		coremap[i].npages = 1;
 		coremap[i].state = FREE;
+
+		paddr_t addr = coremap_base + i * PAGE_SIZE;
+		bzero((void *)PADDR_TO_KVADDR(addr),PAGE_SIZE);
+
 		i++;
 	}
 
@@ -193,6 +201,10 @@ void free_userpage(vaddr_t vaddr){
 				coremap[i].npages = 0;
 				coremap[i].state = FREE;
 				isFreed = true;
+
+				paddr_t addr = coremap_base + i * PAGE_SIZE;
+				bzero((void *)PADDR_TO_KVADDR(addr),PAGE_SIZE);
+
 				break;
 			}
 		}
@@ -202,7 +214,7 @@ void free_userpage(vaddr_t vaddr){
 
 	//KASSERT(isFreed == true);
 	//if(!isFreed)
-		//kprintf("\n Err** Virtual (%d) not found\n",vaddr);
+	//kprintf("\n Err** Virtual (%d) not found\n",vaddr);
 }
 
 

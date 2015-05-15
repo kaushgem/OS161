@@ -157,7 +157,7 @@ common_prog(int nargs, char **args)
 			args /* thread arg */, nargs /* thread arg */,
 			&t1);
 
-	pid_t pid = getpid();
+	//pid_t pid = getpid();
 	//pid_array[pid]->childpid[t1->pid] = true;
 
 	lock_acquire(cpid_array_lock);
