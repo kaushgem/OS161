@@ -327,7 +327,7 @@ execv(const char *prog_name, char **argv)
 	}
 	argc = i;
 
-	kprintf("\n argc : %d\n",argc);
+	//kprintf("\n argc : %d\n",argc);
 
 	struct vnode *v;
 	vaddr_t entrypoint, stackptr;
