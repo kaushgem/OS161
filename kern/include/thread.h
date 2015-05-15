@@ -50,7 +50,7 @@ struct vnode;
 
 
 /* Size of kernel stacks; must be power of 2 */
-#define STACK_SIZE 4096
+#define STACK_SIZE 16384
 
 /* Mask for extracting the stack base address of a kernel stack pointer */
 #define STACK_MASK  (~(vaddr_t)(STACK_SIZE-1))

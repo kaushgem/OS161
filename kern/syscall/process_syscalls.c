@@ -411,6 +411,7 @@ execv(const char *prog_name, char **argv)
 			len_from_top = len_from_top + arglen_pad ;
 			kargv[i] =  stackptr - len_from_top;
 			copyout(ktemp[i], (userptr_t) kargv[i], arglen_pad);
+			kfree((void*)ktemp[i]);
 		}
 		stackptr = stackptr - len_from_top -(argc)*sizeof(vaddr_t);
 		for(int i=0 ; i <argc ; i++){

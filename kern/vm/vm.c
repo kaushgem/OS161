@@ -23,6 +23,8 @@ int validate_permission(int faulttype, int faultaddr);
 paddr_t get_physical_address(int code_index);
 int bp(void);
 
+int aloc=0;
+
 void vm_bootstrap(void){
 
 	paddr_t start, end, free_addr;
@@ -75,6 +77,9 @@ vaddr_t alloc_kpages(int npages){
 	if (pa==0) {
 		return 0;
 	}
+
+	aloc++;
+	//kprintf("Allo:%d\n",aloc);
 
 	return PADDR_TO_KVADDR(pa);
 }
@@ -300,7 +305,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	}else if (faultaddress >= as->hstart && faultaddress <= as->hend) {
 		error = validate_permission(faulttype, 7);
 	}else {
-		panic("\n**Err**Not in any region || Faultaddress: %d \n\n",faultaddress);
+		//panic("\n**Err**Not in any region || Faultaddress: %d \n\n",faultaddress);
 		//return EFAULT;
 	}
 
