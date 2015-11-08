@@ -9,7 +9,6 @@
 #define FILE_SYSCALLS_H_
 
 
-
 struct fhandle {
 	char *name;
 	int flags;

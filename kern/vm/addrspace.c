@@ -44,7 +44,7 @@ vaddr_t as_set_rw_permission(vaddr_t *vadd);
 
 int get_permissions_int(int r, int w, int x);
 int b(void);
-int ch=0;
+int ch = 0;
 
 struct addrspace *
 as_create(void)
@@ -335,10 +335,8 @@ int get_permissions_int(int r, int w, int x)
 		w=1;
 	if(x>0)
 		x=1;
-	//kprintf("\n getting permission ints r: %d w :%d x :%d",r,w,x);
 	int op = 0;
 	op=r+(w<<w)+(x<<2*x);
-	//kprintf("\n permission int : %d",op);
 
 	return op;
 }

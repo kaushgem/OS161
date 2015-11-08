@@ -206,7 +206,6 @@ int write(int fd, const void *buf, size_t size, int* error) {
 		}
 		int bytes_processed = size - uio_obj.uio_resid;
 		fh->offset = uio_obj.uio_offset;
-		//kprintf("\n Byte processed %d     offset: %d", bytes_processed, (int)fh->offset);
 		lock_release(fh->mutex);
 		return bytes_processed;
 	}

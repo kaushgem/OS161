@@ -24,7 +24,6 @@ pid_t allocate_processid()
 {
 	for( pid_t i=5; i <__PID_MAX; i++){
 		if(pid_array[i] == NULL){
-			//kprintf("Allocated pid: %d\n",i);
 			return i;
 		}
 	}
@@ -40,11 +39,6 @@ struct process_block *init_process_block(pid_t parentpid)
 	pb->parent_pid = parentpid;
 	pb->process_sem = sem_create("proc_sem",0);
 	pb->exited = false;
-
-	/*for( int i=0; i < __PID_MAX ; i++)
-	{
-		pb->childpid[i] = false;
-	}*/
 	pb->exitcode = 0;
 	return pb;
 }
@@ -67,13 +61,10 @@ void destroy_childlist(struct child* childlist){
 }
 
 void add_child(struct child* childlist, pid_t child_pid){
-	//kprintf("\nadd_child:  adding child: %d",(int)child_pid);
-	//kprintf("\nadd_child:  creating child node");
 	struct  child *childnode;
 	childnode = (struct child*) kmalloc(sizeof(struct child));
 	childnode->pid = child_pid;
 	childnode->next = NULL;
-	//kprintf("\nadd_child:  child node created");
 	if(childlist==NULL)
 	{
 		childlist= childnode;
@@ -85,7 +76,6 @@ void add_child(struct child* childlist, pid_t child_pid){
 		}
 		childlist->next = childnode;
 	}
-	//kprintf("\nadd_child:  child node added to LL");
 }
 
 void remove_child(struct child* childlist, pid_t child_pid){
@@ -120,6 +110,7 @@ pid_t fork(struct trapframe *ptf, int *error)
 
 	struct addrspace *caddr = kmalloc(sizeof(struct addrspace));
 	*error = as_copy(curthread->t_addrspace, &caddr);
+
 	// new
 	if(*error > 0){
 		return -1;
@@ -205,54 +196,28 @@ pid_t waitpid(pid_t pid, int* status, int options, int *error)
 		*error = ECHILD;
 	}
 
-
-
-	//if(pid = curthread->pid)
-	//kprintf("\nwaitpid: current process pid:  %d",getpid());
 	struct process_block *currentProcess = pid_array[getpid()];
 	struct process_block *childProcess = pid_array[pid];
-
 
 	if(currentProcess->parent_pid == childProcess->parent_pid)
 	{
 		*error = ECHILD;
-		//kprintf("\n Waiting for itself // invalid child process: %d", (int)pid);
 		return -1;
 	}
 
-
-	//kprintf("\nwaitpid: validating  childProcess");
 	if(childProcess == NULL){
 		*error = ESRCH;
-		//kprintf("\ninvalid child process: %d", (int)pid);
 		return -1;
 	}
 
 	// Check whether its my child
 	bool isChild = false;
-	//kprintf("\nwaitpid: checking if pid is  child");
-
-	/*while(currentProcess->child){
-		kprintf(" \nwaitpid: currentProcess->child: %d pid: %d",(int)currentProcess->child, (int)pid );
-		if(currentProcess->child->pid == pid){
-			isChild = true;
-			break;
-		}
-		currentProcess->child = currentProcess->child->next;
-	}*/
-
-	//isChild = currentProcess->childpid[pid];
-
 
 	pid_t mypid = getpid();
-	for( int i=0; i <__PID_MAX; i++)
-	{
+	for( int i=0; i <__PID_MAX; i++) {
 		if(childpid[i]==mypid)
 			isChild = true;
-
 	}
-
-
 
 	if(!isChild){
 		kprintf("\n not a  child process");
@@ -261,43 +226,26 @@ pid_t waitpid(pid_t pid, int* status, int options, int *error)
 	}
 
 	int t= splhigh();
-	//kprintf("\n----> ((2)) waitpid: curpid %d - waiting for the child pid %d to exit\n", (int)getpid(),(int)pid);
 	splx(t);
 
 	if(!childProcess->exited){
-		//kprintf("\nwaitpid: cv waiting");
 		P(childProcess->process_sem);
 	}
 
 	t= splhigh();
-	//kprintf("\n----> ((4)) waitpid: %d exited (%d parent)\n",(int)pid, (int)getpid());
 	splx(t);
 	*status = childProcess->exitcode;
-	//remove_child(currentProcess->child, pid);
-	//kprintf("\nwaitpid: cv waiting done. destroying child process");
-	// currentProcess->childpid[pid] = false;
 	childpid[pid]=0;
-	//kprintf("\n destroying process: %d",(int)pid);
 	destroy_process_block(childProcess);
 	pid_array[pid] = NULL;
 
-
-	//lock_acquire(pid_array_lock);
-	//destroy_zombies();
-	// lock_release(pid_array_lock);
-
-
-
-		return pid;
+	return pid;
 }
 
 void _exit(int exitcode){
 
-
 	int t= splhigh();
-	//kprintf("\n----> ((3))_exit: %d exited\n",(int)getpid());
 	splx(t);
-
 
 	struct process_block *currentProcess = pid_array[getpid()];
 	if(currentProcess !=NULL){
@@ -338,8 +286,6 @@ execv(const char *prog_name, char **argv)
 			return EFAULT;
 	}
 	argc = i;
-
-	//kprintf("\n argc : %d\n",argc);
 
 	struct vnode *v;
 	vaddr_t entrypoint, stackptr;

@@ -79,7 +79,6 @@ vaddr_t alloc_kpages(int npages){
 	}
 
 	aloc++;
-	//kprintf("Allo:%d\n",aloc);
 
 	return PADDR_TO_KVADDR(pa);
 }
@@ -178,11 +177,8 @@ paddr_t alloc_userpage(struct addrspace *as, vaddr_t vaddr){
 			break;
 		}
 	}
-
 	spinlock_release(&coremap_lock);
-
 	KASSERT(addr != 0);
-
 	return addr;
 }
 

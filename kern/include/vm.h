@@ -52,7 +52,7 @@
 #define CLEAN 2
 #define FIXED 3
 
-
+/* Coremap to keep track of Physical memory */
 struct coremap_entry *coremap;
 
 struct coremap_entry{
@@ -71,7 +71,7 @@ paddr_t getppages(int npages);
 paddr_t getppages_vm(int npages);
 void free_kpages(vaddr_t vaddr);
 
-// Allocate/Free User page
+/* Allocate/Free User page */
 vaddr_t alloc_userpage(struct addrspace *as, vaddr_t vaddr);
 void free_userpage(vaddr_t vaddr);
 

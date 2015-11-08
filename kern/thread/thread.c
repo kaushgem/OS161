@@ -139,8 +139,6 @@ thread_create(const char *name)
 	if(is_pid_array_lock_init)
 		lock_release(pid_array_lock);
 
-	//thread->pid = -1;
-
 	thread->t_name = kstrdup(name);
 	if (thread->t_name == NULL) {
 		kfree(thread);
@@ -519,60 +517,18 @@ thread_fork(const char *name,
 {
 	struct thread *newthread;
 
-	// *************************
-	// allocate process id
-
-	/*struct process_block  *cpb = init_process_block(getpid());
-	if(cpb == NULL){
-		return ENOMEM;
-	}
-	lock_acquire(pid_array_lock);
-
-	pid_t cpid = 0;
-	if(getpid()>-1){
-		cpid = allocate_processid(); // remember to handle fork bomb
-		if(cpid<0){
-			lock_release(pid_array_lock);
-			return ENOMEM;
-		}
-		pid_array[getpid()]->childpid[cpid]=true;
-	}
-	else
-	{
-		// kprintf("\n\n**  pid = -1  **\n\n");
-		struct process_block  *ipb = init_process_block(getpid());
-		curthread->pid=allocate_processid();
-		pid_array[curthread->pid] = ipb;
-
-		cpid = allocate_processid(); // remember to handle fork bomb
-		if(cpid<0){
-			lock_release(pid_array_lock);
-			return ENOMEM;
-		}
-		pid_array[getpid()]->childpid[cpid]=true;
-	}
-	pid_array[cpid] = cpb;
-	lock_release(pid_array_lock);*/
-
 	////////////////////////////////////////////////////////////////////////////
 
-
 	newthread = thread_create(name);
+
 	lock_acquire(pid_array_lock);
 	pid_t pid = getpid();
-
-	// pid_array[pid]->childpid[newthread->pid]=true;
-
-
 	lock_release(pid_array_lock);
 
 	lock_acquire(cpid_array_lock);
 	childpid[newthread->pid]=pid;
 	lock_release(cpid_array_lock);
 
-
-
-	//newthread->pid = cpid;
 	if (newthread == NULL) {
 		return ENOMEM;
 	}
@@ -620,10 +576,6 @@ thread_fork(const char *name,
 	switchframe_init(newthread, entrypoint, data1, data2);
 
 	// *************************
-
-	//int t = splhigh();
-	// kprintf("\n----> ((1))thread_fork: curpid: %d, child pid: %d\n",(int)getpid(), cpid);
-	//splx(t);
 
 	thread_make_runnable(newthread, false);
 

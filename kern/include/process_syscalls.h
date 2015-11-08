@@ -13,23 +13,20 @@
 #include <synch.h>
 #include <mips/trapframe.h>
 
+
 struct process_block* pid_array[__PID_MAX];
 int childpid[__PID_MAX];
 
 struct lock *pid_array_lock;
 struct lock *cpid_array_lock;
-
 struct spinlock pid_array_spinlock;
-
 bool is_pid_array_lock_init;
-
 
 struct process_block
 {
 	pid_t parent_pid;
 	bool exited;
 	int exitcode;
-	// bool childpid[__PID_MAX];
 	struct semaphore *process_sem;
 };
 
